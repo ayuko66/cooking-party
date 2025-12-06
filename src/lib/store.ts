@@ -66,7 +66,7 @@ class GameStore {
     const room = this.rooms.get(roomId);
     if (room && room.phase === 'LOBBY') {
       room.phase = 'COUNTDOWN';
-      room.countdownEndTime = Date.now() + 10 * 1000; // 10秒
+      room.countdownEndTime = Date.now() + 30 * 1000; // 30秒
     }
   }
 

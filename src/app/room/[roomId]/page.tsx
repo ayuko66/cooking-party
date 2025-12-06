@@ -2,13 +2,14 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ChefHat, Timer, Send, Users, Sparkles, RefreshCw } from 'lucide-react';
+import { ChefHat, Timer, Send, Users, Sparkles, RefreshCw, User, Copy, Check } from 'lucide-react';
+import QRCode from 'react-qr-code';
 import { Room, Player, GamePhase } from '@/lib/store';
 
 export default function RoomPage() {
   const params = useParams();
   const router = useRouter();
-  const roomId = (params.roomId as string).toUpperCase();
+  const roomId = decodeURIComponent(params.roomId as string).toUpperCase();
 
   const [nickname, setNickname] = useState('');
   const [player, setPlayer] = useState<Player | null>(null);
@@ -16,6 +17,20 @@ export default function RoomPage() {
   const [ingredient, setIngredient] = useState('');
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
   const [error, setError] = useState('');
+  const [shareUrl, setShareUrl] = useState('');
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setShareUrl(window.location.href);
+    }
+  }, []);
+
+  const handleCopyUrl = () => {
+    navigator.clipboard.writeText(shareUrl);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   // 部屋の状態をポーリング
   useEffect(() => {
@@ -176,9 +191,41 @@ export default function RoomPage() {
           {/* ロビー */}
           {room.phase === 'LOBBY' && (
             <div className="flex-1 flex flex-col items-center justify-center space-y-8">
+              <div className="bg-orange-100 p-4 rounded-xl text-center max-w-md mx-auto w-full">
+                <p className="text-orange-800 font-bold">
+                  みんなで、30秒以内に材料を入力すると<br />AIが料理してくれる
+                </p>
+              </div>
               <div className="text-center space-y-2">
                 <h2 className="text-2xl font-bold text-gray-800">メンバー待機中...</h2>
                 <p className="text-gray-500">ホストが開始するのを待っています</p>
+                <p className="text-sm text-orange-600 font-bold bg-orange-100 px-3 py-1 rounded-full inline-block">
+                  1〜5名まで参加OK
+                </p>
+              </div>
+
+              {/* QRコードとURL */}
+              <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-col items-center gap-4">
+                <div className="bg-white p-2 rounded-lg border border-gray-100">
+                  {shareUrl && <QRCode value={shareUrl} size={128} />}
+                </div>
+                <div className="w-full max-w-xs">
+                  <div className="flex items-center gap-2 bg-gray-50 p-2 rounded-lg border border-gray-200">
+                    <input 
+                      type="text" 
+                      value={shareUrl} 
+                      readOnly 
+                      className="bg-transparent flex-1 text-xs text-gray-500 outline-none"
+                    />
+                    <button 
+                      onClick={handleCopyUrl}
+                      className="p-1.5 hover:bg-gray-200 rounded-md transition-colors text-gray-600"
+                      title="URLをコピー"
+                    >
+                      {copied ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
               </div>
 
               <div className="w-full max-w-sm bg-orange-50 rounded-xl p-4">
@@ -187,7 +234,7 @@ export default function RoomPage() {
                   {room.players.map((p) => (
                     <li key={p.id} className="flex items-center gap-2 bg-white p-2 rounded-lg shadow-sm">
                       <div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center text-orange-600 font-bold">
-                        {p.nickname[0]}
+                        <User className="w-5 h-5" />
                       </div>
                       <span className="font-medium">{p.nickname}</span>
                       {room.players[0].id === p.id && (
@@ -213,8 +260,32 @@ export default function RoomPage() {
           {room.phase === 'COUNTDOWN' && (
             <div className="flex-1 flex flex-col">
               <div className="text-center mb-8">
-                <div className="text-6xl font-black text-orange-500 mb-2 font-mono">
-                  {timeLeft}
+                <div className="relative w-32 h-32 mx-auto mb-4 flex items-center justify-center">
+                  <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 100 100">
+                    <circle
+                      cx="50"
+                      cy="50"
+                      r="45"
+                      fill="none"
+                      stroke="#fed7aa"
+                      strokeWidth="8"
+                    />
+                    <circle
+                      cx="50"
+                      cy="50"
+                      r="45"
+                      fill="none"
+                      stroke="#f97316"
+                      strokeWidth="8"
+                      strokeDasharray="283"
+                      strokeDashoffset={283 - (283 * (timeLeft || 0)) / 20}
+                      className="transition-all duration-1000 ease-linear"
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                  <div className="text-4xl font-black text-orange-500 font-mono relative z-10">
+                    {timeLeft}
+                  </div>
                 </div>
                 <p className="text-gray-600 font-bold animate-pulse">材料を入力して送信！</p>
               </div>

@@ -28,13 +28,16 @@ export async function POST(request: Request) {
       if (ingredients.length === 0) {
         dishName = 'おいしい空気';
         description = '素材の味を極限まで活かしました。カロリーゼロでヘルシーです。';
-        // 空気の画像、または空の皿の画像を生成
-        imageUrl = await generateImage('Delicious Air', 'Empty plate on a table, minimal, artistic, white background');
+        imageUrl = await generateImage(
+          'Delicious Air',
+          'Empty plate on a table, minimal, artistic, white background',
+          []
+        );
       } else {
         const dish = await generateDish(ingredients);
         dishName = dish.name;
         description = dish.description;
-        imageUrl = await generateImage(dish.name, dish.description);
+        imageUrl = await generateImage(dish.name, dish.description, ingredients);
       }
 
       store.setResult(roomId, {
