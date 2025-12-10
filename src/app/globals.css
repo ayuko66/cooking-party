@@ -1,19 +1,107 @@
+@import url('https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;500;700;800&family=Varela+Round&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+@theme {
+  --color-ink-base: #0B1021;
+  --color-ink-surface: #1E293B;
+  
+  --color-ink-magenta: #F000FF;
+  --color-ink-cyan: #00FFFF;
+  --color-ink-lime: #CCFF00;
+  --color-ink-purple: #9D00FF;
+  --color-ink-yellow: #FFD600;
+
+  --font-display: "M PLUS Rounded 1c", "Varela Round", sans-serif;
+  --font-body: "M PLUS Rounded 1c", sans-serif;
+
+  --animate-bounce-slight: bounce-slight 2s infinite;
+  --animate-float: float 6s ease-in-out infinite;
+  --animate-splat: splat 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+
+  @keyframes bounce-slight {
+    0%, 100% {
+      transform: translateY(-5%);
+      animation-timing-function: cubic-bezier(0.8, 0, 1, 1);
+    }
+    50% {
+      transform: translateY(0);
+      animation-timing-function: cubic-bezier(0, 0, 0.2, 1);
+    }
+  }
+
+  @keyframes float {
+    0% { transform: translateY(0px) rotate(0deg); }
+    50% { transform: translateY(-20px) rotate(2deg); }
+    100% { transform: translateY(0px) rotate(0deg); }
+  }
+
+  @keyframes splat {
+    0% { transform: scale(0); opacity: 0; }
+    50% { transform: scale(1.2); opacity: 1; }
+    100% { transform: scale(1); opacity: 1; }
+  }
+}
+
 :root {
-  --foreground-rgb: 0, 0, 0;
-  --background-start-rgb: 214, 219, 220;
-  --background-end-rgb: 255, 255, 255;
+  --font-sans: var(--font-body);
 }
 
 body {
-  color: rgb(var(--foreground-rgb));
-  background: linear-gradient(
-      to bottom,
-      transparent,
-      rgb(var(--background-end-rgb))
-    )
-    rgb(var(--background-start-rgb));
+  background-color: var(--color-ink-base);
+  color: #F8FAFC;
+  font-family: var(--font-body);
+  min-height: 100vh;
+  overflow-x: hidden;
+  background-image: 
+    radial-gradient(circle at 10% 20%, rgba(240, 0, 255, 0.05) 0%, transparent 20%),
+    radial-gradient(circle at 90% 80%, rgba(0, 255, 255, 0.05) 0%, transparent 20%);
+}
+
+/* Custom Utilities */
+@layer utilities {
+  .text-shadow-sm {
+    text-shadow: 1px 1px 0 rgba(0,0,0,0.2);
+  }
+  .text-shadow {
+    text-shadow: 2px 2px 0 rgba(0,0,0,0.3);
+  }
+  .text-shadow-lg {
+    text-shadow: 3px 3px 0 rgba(0,0,0,0.4);
+  }
+  
+  .box-shadow-sticker {
+    box-shadow: 0 4px 0 rgba(0, 0, 0, 0.3);
+  }
+  
+  .box-shadow-sticker-hover {
+    box-shadow: 0 6px 0 rgba(0, 0, 0, 0.3);
+    transform: translateY(-2px);
+  }
+  
+  .box-shadow-sticker-active {
+    box-shadow: 0 0 0 rgba(0, 0, 0, 0.3);
+    transform: translateY(4px);
+  }
+}
+
+/* Splatoon-ish Scrollbar */
+::-webkit-scrollbar {
+  width: 12px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-ink-base); 
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-ink-surface); 
+  border-radius: 9999px;
+  border: 3px solid var(--color-ink-base);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-ink-magenta); 
 }

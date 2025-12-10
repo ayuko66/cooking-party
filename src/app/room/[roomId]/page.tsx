@@ -1,10 +1,14 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ChefHat, Timer, Send, Users, Sparkles, RefreshCw, User, Copy, Check } from 'lucide-react';
+import { ChefHat, Send, Users, User, Copy, Check, RefreshCw, Sparkles, Clock, Crown } from 'lucide-react';
 import QRCode from 'react-qr-code';
-import { Room, Player, GamePhase } from '@/lib/store';
+import { Room, Player } from '@/lib/store';
+import { InkLayout } from '@/components/ui/ink-layout';
+import { InkButton } from '@/components/ui/ink-button';
+import { InkCard } from '@/components/ui/ink-card';
+import { cn } from '@/lib/utils';
 
 export default function RoomPage() {
   const params = useParams();
@@ -32,7 +36,6 @@ export default function RoomPage() {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  // 部屋の状態をポーリング
   useEffect(() => {
     if (!player) return;
 
@@ -58,28 +61,18 @@ export default function RoomPage() {
     return () => clearInterval(interval);
   }, [roomId, player, router]);
 
-  // カウントダウンタイマーのロジック
   useEffect(() => {
     if (room?.phase === 'COUNTDOWN' && room.countdownEndTime) {
       const updateTimer = () => {
         const remaining = Math.max(0, Math.ceil((room.countdownEndTime! - Date.now()) / 1000));
         setTimeLeft(remaining);
-        if (remaining === 0 && player) {
-           // ホストなら調理を開始するか？それともサーバーを待つか？
-           // サーバーは自動遷移しない。クライアントがトリガーするか、サーバーにトリガーが必要。
-           // MVPでは、タイマー終了時にホストが自動的に'cook'をトリガーする？
-           // またはシンプルに：サーバーのstateエンドポイントが時間を確認して遷移する？
-           // しかし、バックグラウンドジョブなしのインメモリストアを使用している。
-           // そのため、ホストに遷移をトリガーさせる。
-        }
       };
       updateTimer();
       const timer = setInterval(updateTimer, 100);
       return () => clearInterval(timer);
     }
-  }, [room?.phase, room?.countdownEndTime, player]);
+  }, [room?.phase, room?.countdownEndTime]);
 
-  // 時間切れ時にホストが自動的に調理をトリガー
   useEffect(() => {
     if (timeLeft === 0 && room?.phase === 'COUNTDOWN' && room.players[0].id === player?.id) {
        fetch('/api/rooms/cook', {
@@ -102,7 +95,6 @@ export default function RoomPage() {
       const data = await res.json();
       if (res.ok) {
         setPlayer(data.player);
-        // 必要ならセッションを永続化するが、今のところはstateのみ
       } else {
         setError(data.error);
       }
@@ -132,263 +124,314 @@ export default function RoomPage() {
     }
   };
 
-  // --- 画面表示 ---
-
+  // --- JOIN SCREEN ---
   if (!player) {
     return (
-      <div className="min-h-screen bg-orange-50 flex items-center justify-center p-4">
-        <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8">
-          <h1 className="text-2xl font-bold text-center mb-6">部屋に参加: {roomId}</h1>
-          <form onSubmit={handleJoin} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">ニックネーム</label>
-              <input
-                type="text"
-                value={nickname}
-                onChange={(e) => setNickname(e.target.value)}
-                className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 outline-none"
-                placeholder="例: たなか"
-                maxLength={10}
-              />
+      <InkLayout className="items-center justify-center">
+        <InkCard variant="neon" className="w-full max-w-md p-0 overflow-hidden" decoration="splat">
+          <div className="bg-ink-base/50 p-8 space-y-8">
+            <div className="text-center space-y-2">
+              <h1 className="text-3xl font-black text-white italic transform -rotate-2">JOIN ROOM</h1>
+              <div className="inline-block px-6 py-2 bg-ink-cyan text-ink-base font-black text-2xl rotate-2 rounded-sm shadow-lg">
+                ID: {roomId}
+              </div>
             </div>
-            {error && <p className="text-red-500 text-sm">{error}</p>}
-            <button
-              type="submit"
-              disabled={!nickname.trim()}
-              className="w-full bg-orange-500 text-white py-3 rounded-lg font-bold hover:bg-orange-600 transition-colors disabled:opacity-50"
-            >
-              参加する
-            </button>
-          </form>
-        </div>
-      </div>
+            
+            <form onSubmit={handleJoin} className="space-y-6">
+              <div className="space-y-2">
+                <label className="block text-sm font-bold text-ink-magenta uppercase tracking-wider">Nickname</label>
+                <input
+                  type="text"
+                  value={nickname}
+                  onChange={(e) => setNickname(e.target.value)}
+                  className="w-full px-4 py-4 bg-ink-base border-4 border-ink-surface rounded-xl focus:border-ink-pink focus:outline-none text-white font-bold placeholder-gray-600 transition-all text-lg"
+                  placeholder="例: イカした名前"
+                  maxLength={10}
+                />
+              </div>
+              {error && (
+                <div className="text-white text-sm font-bold bg-red-500/80 p-3 rounded-lg animate-bounce-slight text-center border-2 border-red-500">
+                  {error}
+                </div>
+              )}
+              <InkButton
+                type="submit"
+                variant="primary"
+                size="lg"
+                disabled={!nickname.trim()}
+                className="w-full text-xl"
+              >
+                参加する！
+              </InkButton>
+            </form>
+          </div>
+        </InkCard>
+      </InkLayout>
     );
   }
 
-  if (!room) return <div className="min-h-screen bg-orange-50 flex items-center justify-center">Loading...</div>;
+  if (!room) return (
+    <InkLayout className="items-center justify-center">
+      <div className="text-4xl font-black text-white animate-bounce text-stroke-2 text-stroke-black">
+        LOADING...
+      </div>
+    </InkLayout>
+  );
 
   const isHost = room.players[0]?.id === player.id;
 
   return (
-    <div className="min-h-screen bg-orange-50 p-4">
-      <div className="max-w-2xl mx-auto bg-white rounded-2xl shadow-xl overflow-hidden min-h-[80vh] flex flex-col">
-        
-        {/* ヘッダー */}
-        <div className="bg-orange-500 p-4 text-white flex justify-between items-center">
-          <div className="flex items-center gap-2">
-            <ChefHat className="w-6 h-6" />
-            <span className="font-bold text-lg">Room: {roomId}</span>
+    <InkLayout>
+      {/* HEADER */}
+      <div className="flex justify-between items-center mb-8 bg-ink-surface/60 backdrop-blur-md p-4 rounded-full border-2 border-white/5 shadow-xl sticky top-4 z-50">
+        <div className="flex items-center gap-4">
+          <div className="bg-ink-magenta p-2 rounded-full shadow-lg">
+            <ChefHat className="w-6 h-6 text-white" />
           </div>
-          <div className="flex items-center gap-2 text-sm">
-            <Users className="w-4 h-4" />
-            <span>{room.players.length}人</span>
+          <div className="leading-tight">
+            <div className="text-xs font-bold text-ink-cyan uppercase tracking-widest">Room ID</div>
+            <div className="text-xl font-black text-white font-mono tracking-tighter">{roomId}</div>
           </div>
         </div>
+        <div className="flex items-center gap-2 bg-ink-base/80 px-4 py-2 rounded-full border border-white/10">
+          <Users className="w-4 h-4 text-ink-lime" />
+          <span className="text-lg font-bold text-white">{room.players.length}</span>
+        </div>
+      </div>
 
-        {/* コンテンツ */}
-        <div className="flex-1 p-6 flex flex-col">
+      {/* LOBBY PHASE */}
+      {room.phase === 'LOBBY' && (
+        <div className="flex-1 flex flex-col items-center gap-8">
           
-          {/* ロビー */}
-          {room.phase === 'LOBBY' && (
-            <div className="flex-1 flex flex-col items-center justify-center space-y-8">
-              <div className="bg-orange-100 p-4 rounded-xl text-center max-w-md mx-auto w-full">
-                <p className="text-orange-800 font-bold">
-                  みんなで、30秒以内に材料を入力すると<br />AIが料理してくれる
-                </p>
-              </div>
-              <div className="text-center space-y-2">
-                <h2 className="text-2xl font-bold text-gray-800">メンバー待機中...</h2>
-                <p className="text-gray-500">ホストが開始するのを待っています</p>
-                <p className="text-sm text-orange-600 font-bold bg-orange-100 px-3 py-1 rounded-full inline-block">
-                  1〜5名まで参加OK
-                </p>
-              </div>
+          <div className="w-full bg-ink-cyan/10 border-2 border-ink-cyan/30 p-4 rounded-2xl text-center backdrop-blur-sm animate-pulse">
+            <p className="text-xl font-black text-white text-shadow-sm">
+             みんなで、<span className="text-ink-cyan text-2xl">30秒以内</span>に材料を入力すると<br/>
+             <span className="text-ink-magenta text-2xl">AIシェフ</span>が料理してくれる！
+            </p>
+          </div>
 
-              {/* QRコードとURL */}
-              <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-col items-center gap-4">
-                <div className="bg-white p-2 rounded-lg border border-gray-100">
-                  {shareUrl && <QRCode value={shareUrl} size={128} />}
-                </div>
-                <div className="w-full max-w-xs">
-                  <div className="flex items-center gap-2 bg-gray-50 p-2 rounded-lg border border-gray-200">
-                    <input 
-                      type="text" 
-                      value={shareUrl} 
-                      readOnly 
-                      className="bg-transparent flex-1 text-xs text-gray-500 outline-none"
-                    />
-                    <button 
-                      onClick={handleCopyUrl}
-                      className="p-1.5 hover:bg-gray-200 rounded-md transition-colors text-gray-600"
-                      title="URLをコピー"
-                    >
-                      {copied ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              <div className="w-full max-w-sm bg-orange-50 rounded-xl p-4">
-                <h3 className="text-sm font-bold text-gray-500 mb-3 uppercase tracking-wider">参加者リスト</h3>
-                <ul className="space-y-2">
-                  {room.players.map((p) => (
-                    <li key={p.id} className="flex items-center gap-2 bg-white p-2 rounded-lg shadow-sm">
-                      <div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center text-orange-600 font-bold">
-                        <User className="w-5 h-5" />
-                      </div>
-                      <span className="font-medium">{p.nickname}</span>
-                      {room.players[0].id === p.id && (
-                        <span className="text-xs bg-orange-500 text-white px-2 py-0.5 rounded-full">HOST</span>
-                      )}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-              {isHost && (
-                <button
-                  onClick={handleStart}
-                  className="w-full max-w-xs bg-green-500 text-white py-4 rounded-xl font-bold text-xl hover:bg-green-600 transition-all shadow-lg transform hover:scale-105"
-                >
-                  ゲームスタート！
-                </button>
-              )}
-            </div>
-          )}
-
-          {/* カウントダウン / 入力 */}
-          {room.phase === 'COUNTDOWN' && (
-            <div className="flex-1 flex flex-col">
-              <div className="text-center mb-8">
-                <div className="relative w-32 h-32 mx-auto mb-4 flex items-center justify-center">
-                  <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 100 100">
-                    <circle
-                      cx="50"
-                      cy="50"
-                      r="45"
-                      fill="none"
-                      stroke="#fed7aa"
-                      strokeWidth="8"
-                    />
-                    <circle
-                      cx="50"
-                      cy="50"
-                      r="45"
-                      fill="none"
-                      stroke="#f97316"
-                      strokeWidth="8"
-                      strokeDasharray="283"
-                      strokeDashoffset={283 - (283 * (timeLeft || 0)) / 20}
-                      className="transition-all duration-1000 ease-linear"
-                      strokeLinecap="round"
-                    />
-                  </svg>
-                  <div className="text-4xl font-black text-orange-500 font-mono relative z-10">
-                    {timeLeft}
-                  </div>
-                </div>
-                <p className="text-gray-600 font-bold animate-pulse">材料を入力して送信！</p>
-              </div>
-
-              <div className="flex-1 space-y-4">
-                <form onSubmit={handleSubmitIngredient} className="flex gap-2">
-                  <input
-                    type="text"
-                    value={ingredient}
-                    onChange={(e) => setIngredient(e.target.value)}
-                    placeholder="材料 (例: ドラゴンの肉)"
-                    className="flex-1 px-4 py-3 border-2 border-orange-200 rounded-xl focus:border-orange-500 outline-none text-lg"
-                    maxLength={10}
-                    autoFocus
-                  />
-                  <button
-                    type="submit"
-                    disabled={!ingredient.trim()}
-                    className="bg-orange-500 text-white px-6 rounded-xl hover:bg-orange-600 transition-colors disabled:opacity-50"
-                  >
-                    <Send className="w-6 h-6" />
-                  </button>
-                </form>
-
-                <div className="bg-gray-50 rounded-xl p-4 h-64 overflow-y-auto">
-                  <h3 className="text-sm font-bold text-gray-500 mb-2">投稿された材料 ({room.ingredients.length}/20)</h3>
-                  <div className="flex flex-wrap gap-2">
-                    {room.ingredients.map((ing) => (
-                      <span key={ing.id} className="bg-white border border-gray-200 px-3 py-1 rounded-full text-sm shadow-sm animate-in fade-in zoom-in duration-300">
-                        {ing.text}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* 調理中 */}
-          {room.phase === 'COOKING' && (
-            <div className="flex-1 flex flex-col items-center justify-center text-center space-y-6">
-              <div className="relative">
-                <div className="absolute inset-0 bg-orange-200 rounded-full animate-ping opacity-20"></div>
-                <div className="w-32 h-32 bg-orange-100 rounded-full flex items-center justify-center relative z-10">
-                  <ChefHat className="w-16 h-16 text-orange-500 animate-bounce" />
-                </div>
-              </div>
-              <div>
-                <h2 className="text-2xl font-bold text-gray-800 mb-2">AIシェフが調理中...</h2>
-                <p className="text-gray-500">最高の一皿を仕上げています</p>
-              </div>
-            </div>
-          )}
-
-          {/* 結果 */}
-          {room.phase === 'RESULT' && room.result && (
-            <div className="flex-1 flex flex-col space-y-6 animate-in slide-in-from-bottom duration-700">
+          <div className="grid md:grid-cols-2 gap-8 w-full">
+            <InkCard variant="glass" className="flex flex-col items-center justify-center gap-6 py-10">
               <div className="text-center">
-                <div className="inline-block bg-orange-100 text-orange-800 px-4 py-1 rounded-full text-sm font-bold mb-4">
-                  完成しました！
+                <h2 className="text-2xl font-black text-white mb-2">WAITING...</h2>
+                <div className="text-sm font-bold text-ink-lime bg-ink-base/50 px-3 py-1 rounded-full inline-block">
+                  ホストの開始を待っています
                 </div>
-                <h2 className="text-3xl font-black text-gray-900 mb-4 leading-tight">
-                  {room.result.dishName}
-                </h2>
               </div>
 
-              <div className="aspect-video w-full bg-gray-100 rounded-2xl overflow-hidden shadow-lg relative group">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
+              <div className="bg-white p-4 rounded-xl shadow-xl transform rotate-2 border-4 border-ink-base">
+                {shareUrl && <QRCode value={shareUrl} size={150} />}
+              </div>
+
+              <div className="flex items-center gap-2 w-full max-w-xs">
+                <div className="flex-1 bg-ink-base/80 px-3 py-2 rounded-lg border border-white/10 text-xs font-mono text-gray-400 truncate">
+                  {shareUrl}
+                </div>
+                <button 
+                  onClick={handleCopyUrl}
+                  className="bg-ink-surface p-2 rounded-lg hover:bg-ink-surface/80 text-white transition-colors"
+                >
+                  {copied ? <Check className="w-4 h-4 text-ink-lime" /> : <Copy className="w-4 h-4" />}
+                </button>
+              </div>
+            </InkCard>
+
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 px-2">
+                <User className="w-5 h-5 text-ink-magenta" />
+                <h3 className="font-black text-white text-lg uppercase italic">Players</h3>
+              </div>
+              <div className="grid grid-cols-1 gap-3">
+                {room.players.map((p, i) => (
+                  <div 
+                    key={p.id} 
+                    className="flex items-center gap-4 bg-ink-surface border-2 border-ink-base/50 p-3 rounded-2xl shadow-lg transform hover:-translate-y-1 transition-transform"
+                    style={{ transform: `rotate(${i % 2 === 0 ? '1deg' : '-1deg'})` }}
+                  >
+                    <div className="w-12 h-12 bg-gradient-to-tr from-ink-purple to-ink-magenta rounded-full flex items-center justify-center text-white font-bold border-2 border-white/20">
+                      {p.nickname[0]}
+                    </div>
+                    <span className="font-black text-white text-lg flex-1">{p.nickname}</span>
+                    {room.players[0].id === p.id && (
+                      <Crown className="w-6 h-6 text-ink-yellow drop-shadow-md" />
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {isHost && (
+            <div className="fixed bottom-8 left-0 right-0 px-4 md:relative md:bottom-auto">
+              <InkButton
+                onClick={handleStart}
+                variant="accent"
+                size="xl"
+                className="w-full max-w-md mx-auto shadow-[0_0_30px_rgba(204,255,0,0.4)] animate-bounce-slight"
+              >
+                ゲームスタート！
+              </InkButton>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* GAME PHASE */}
+      {room.phase === 'COUNTDOWN' && (
+        <div className="flex-1 flex flex-col items-center w-full max-w-2xl mx-auto">
+          {/* Timer */}
+          <div className="relative mb-12 transform hover:scale-105 transition-transform duration-300">
+             <svg className="w-48 h-48 -rotate-90 drop-shadow-[0_0_15px_rgba(240,0,255,0.5)]" viewBox="0 0 100 100">
+              <circle cx="50" cy="50" r="45" fill="none" stroke="#0B1021" strokeWidth="12" />
+              <circle
+                cx="50" cy="50" r="45" fill="none" stroke="url(#timer-gradient)" strokeWidth="12"
+                strokeDasharray="283"
+                strokeDashoffset={283 - (283 * (timeLeft || 0)) / 30}
+                strokeLinecap="round"
+                className="transition-all duration-1000 ease-linear"
+              />
+              <defs>
+                <linearGradient id="timer-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%" stopColor="#F000FF" />
+                  <stop offset="100%" stopColor="#CCFF00" />
+                </linearGradient>
+              </defs>
+            </svg>
+            <div className="absolute inset-0 flex items-center justify-center flex-col">
+              <span className="text-6xl font-black text-white font-mono drop-shadow-md">{timeLeft}</span>
+              <span className="text-xs font-bold text-ink-magenta uppercase tracking-widest mt-1">SECONDS</span>
+            </div>
+          </div>
+
+          <form onSubmit={handleSubmitIngredient} className="w-full space-y-4 mb-8">
+            <div className="relative">
+              <input
+                type="text"
+                value={ingredient}
+                onChange={(e) => setIngredient(e.target.value)}
+                placeholder="材料を入力 (例: ドラゴンフルーツ)"
+                className="w-full px-6 py-5 bg-ink-base border-4 border-ink-surface rounded-3xl focus:border-ink-cyan outline-none text-2xl font-bold text-white placeholder-gray-700 transition-all shadow-inner"
+                maxLength={20}
+                autoFocus
+              />
+              <button
+                type="submit"
+                disabled={!ingredient.trim()}
+                className="absolute right-3 top-3 bottom-3 aspect-square bg-ink-magenta rounded-2xl flex items-center justify-center text-white hover:bg-ink-pink disabled:opacity-50 disabled:hover:bg-ink-magenta transition-colors shadow-lg"
+              >
+                <Send className="w-6 h-6" />
+              </button>
+            </div>
+            <p className="text-center text-ink-cyan font-bold text-sm animate-pulse">
+              どんどん送信しよう！
+            </p>
+          </form>
+
+          <div className="w-full bg-ink-surface/50 rounded-3xl p-6 border-2 border-white/5 min-h-[200px]">
+             <div className="flex justify-between items-center mb-4">
+                <h3 className="font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-ink-lime animate-pulse" />
+                  みんなの材料
+                </h3>
+                <span className="font-mono text-ink-cyan">{room.ingredients.length}</span>
+             </div>
+             <div className="flex flex-wrap gap-3">
+                {room.ingredients.map((ing, i) => (
+                  <span 
+                    key={ing.id} 
+                    className="bg-ink-base border-2 border-ink-surface text-white px-4 py-2 rounded-xl font-bold text-sm shadow-md animate-in zoom-in duration-300"
+                    style={{ 
+                      animationDelay: `${i * 50}ms`,
+                      transform: `rotate(${Math.random() * 6 - 3}deg)`
+                    }}
+                  >
+                    {ing.text}
+                  </span>
+                ))}
+             </div>
+          </div>
+        </div>
+      )}
+
+      {/* COOKING PHASE */}
+      {room.phase === 'COOKING' && (
+        <div className="flex-1 flex flex-col items-center justify-center text-center">
+          <div className="relative w-64 h-64 mb-12">
+            <div className="absolute inset-0 bg-ink-magenta/20 blur-[60px] rounded-full animate-pulse" />
+            <div className="absolute inset-0 flex items-center justify-center">
+              <ChefHat className="w-32 h-32 text-ink-lime animate-bounce-slight drop-shadow-[0_4px_0_rgba(0,0,0,0.5)]" />
+            </div>
+            <div className="absolute -top-4 -right-4 w-12 h-12 bg-ink-cyan rounded-full animate-float [animation-delay:0.5s]" />
+            <div className="absolute -bottom-8 -left-8 w-16 h-16 bg-ink-pink rounded-full animate-float [animation-delay:1.2s]" />
+          </div>
+          
+          <h2 className="text-4xl md:text-5xl font-black text-white italic mb-4 text-shadow-lg">
+            COOKING...
+          </h2>
+          <p className="text-xl text-ink-cyan font-bold tracking-widest animate-pulse">
+            AIシェフが調理中！
+          </p>
+        </div>
+      )}
+
+      {/* RESULT PHASE */}
+      {room.phase === 'RESULT' && room.result && (
+        <div className="flex-1 w-full max-w-3xl mx-auto animate-in slide-in-from-bottom duration-700">
+           <div className="text-center mb-8 relative">
+              <div className="inline-block bg-ink-lime text-ink-base px-8 py-2 rounded-full text-xl font-black italic transform -rotate-3 shadow-[0_4px_0_rgba(0,0,0,0.3)] mb-4 border-2 border-black">
+                DISH COMPLETE!
+              </div>
+              <h2 className="text-4xl md:text-5xl font-black text-white drop-shadow-xl p-4 bg-ink-base/80 backdrop-blur-md rounded-3xl border-2 border-ink-surface mx-auto inline-block">
+                {room.result.dishName}
+              </h2>
+           </div>
+
+           < InkCard variant="solid" className="p-2 bg-white transform rotate-1 mb-8">
+              <div className="relative aspect-video bg-black rounded-2xl overflow-hidden border-2 border-black">
+                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img 
                   src={room.result.imageUrl} 
                   alt={room.result.dishName}
-                  className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                  className="w-full h-full object-cover"
                 />
-              </div>
-
-              <div className="bg-orange-50 p-6 rounded-xl border border-orange-100">
-                <p className="text-gray-700 leading-relaxed font-medium">
-                  {room.result.description}
-                </p>
-              </div>
-
-              <div className="border-t pt-6">
-                <h3 className="text-sm font-bold text-gray-500 mb-3">使われた材料</h3>
-                <div className="flex flex-wrap gap-2 text-sm text-gray-600">
-                  {room.ingredients.map((ing) => (
-                    <span key={ing.id} className="bg-gray-100 px-2 py-1 rounded">
-                      {ing.text}
-                    </span>
-                  ))}
+                <div className="absolute bottom-4 right-4 bg-black/70 backdrop-blur-md px-3 py-1 rounded-lg flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-ink-lime" />
+                  <span className="text-white text-xs font-bold">AI GENERATED</span>
                 </div>
               </div>
+           </InkCard>
 
-              <button
-                onClick={() => router.push('/')}
-                className="w-full bg-gray-900 text-white py-4 rounded-xl font-bold hover:bg-gray-800 transition-colors flex items-center justify-center gap-2"
-              >
-                <RefreshCw className="w-5 h-5" />
-                もう一度遊ぶ
-              </button>
-            </div>
-          )}
+           <div className="bg-ink-surface/80 backdrop-blur-md p-6 rounded-3xl border-2 border-white/10 mb-8 shadow-xl">
+             <p className="text-lg text-white font-medium leading-relaxed">
+               {room.result.description}
+             </p>
+           </div>
+
+           <div className="mb-12">
+             <h3 className="text-ink-cyan font-black text-sm uppercase tracking-widest mb-4 flex items-center gap-2">
+               <span className="w-8 h-1 bg-ink-cyan rounded-full" />
+               Ingredients Used
+             </h3>
+             <div className="flex flex-wrap gap-2">
+                {room.ingredients.map((ing) => (
+                  <span key={ing.id} className="bg-ink-base border border-ink-surface/50 text-gray-300 px-3 py-1 rounded-lg text-sm">
+                    {ing.text}
+                  </span>
+                ))}
+             </div>
+           </div>
+
+           <InkButton 
+              onClick={() => router.push('/')}
+              variant="secondary"
+              size="lg"
+              className="w-full font-black text-xl py-6"
+           >
+              <RefreshCw className="mr-2 w-6 h-6" />
+              もう一度遊ぶ
+           </InkButton>
         </div>
-      </div>
-    </div>
+      )}
+    </InkLayout>
   );
 }
