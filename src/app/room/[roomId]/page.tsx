@@ -376,58 +376,67 @@ export default function RoomPage() {
 
       {/* RESULT PHASE */}
       {room.phase === 'RESULT' && room.result && (
-        <div className="flex-1 w-full max-w-3xl mx-auto animate-in slide-in-from-bottom duration-700">
-           <div className="text-center mb-8 relative">
-              <div className="inline-block bg-ink-lime text-ink-base px-8 py-2 rounded-full text-xl font-black italic transform -rotate-3 shadow-[0_4px_0_rgba(0,0,0,0.3)] mb-4 border-2 border-black">
+        <div className="flex-1 w-full max-w-md mx-auto animate-in slide-in-from-bottom duration-700 pb-8">
+           {/* Header Section */}
+           <div className="text-center mb-8 relative space-y-4">
+              <div className="inline-block bg-ink-lime text-black px-6 py-2 rounded-full text-lg font-black italic transform -rotate-2 border-2 border-black shadow-[4px_4px_0_rgba(0,0,0,1)]">
                 DISH COMPLETE!
               </div>
-              <h2 className="text-4xl md:text-5xl font-black text-white drop-shadow-xl p-4 bg-ink-base/80 backdrop-blur-md rounded-3xl border-2 border-ink-surface mx-auto inline-block">
+              <h2 className="text-3xl font-black text-white bg-ink-surface px-6 py-4 rounded-2xl border-2 border-white/10 shadow-lg leading-tight break-words">
                 {room.result.dishName}
               </h2>
            </div>
 
-           < InkCard variant="solid" className="p-2 bg-white transform rotate-1 mb-8">
-              <div className="relative aspect-video bg-black rounded-2xl overflow-hidden border-2 border-black">
-                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img 
-                  src={room.result.imageUrl} 
-                  alt={room.result.dishName}
-                  className="w-full h-full object-cover"
-                />
-                <div className="absolute bottom-4 right-4 bg-black/70 backdrop-blur-md px-3 py-1 rounded-lg flex items-center gap-2">
-                  <Sparkles className="w-4 h-4 text-ink-lime" />
-                  <span className="text-white text-xs font-bold">AI GENERATED</span>
+           {/* Image Section */}
+           <div className="mb-8">
+             <InkCard variant="neon" className="p-1 mb-2 bg-ink-base border-ink-magenta transform rotate-1">
+                <div className="relative aspect-video bg-black rounded-xl overflow-hidden">
+                   {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img 
+                    src={room.result.imageUrl} 
+                    alt={room.result.dishName}
+                    className="w-full h-full object-cover"
+                  />
                 </div>
-              </div>
-           </InkCard>
+             </InkCard>
+             <div className="flex justify-end px-2">
+                <div className="bg-black/80 backdrop-blur-md px-3 py-1 rounded-full border border-ink-magenta/50 flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-ink-magenta" />
+                  <span className="text-white text-xs font-bold tracking-wider">AI GENERATED</span>
+                </div>
+             </div>
+           </div>
 
-           <div className="bg-ink-surface/80 backdrop-blur-md p-6 rounded-3xl border-2 border-white/10 mb-8 shadow-xl">
-             <p className="text-lg text-white font-medium leading-relaxed">
+           {/* Description Section */}
+           <div className="bg-ink-surface p-6 rounded-3xl border-l-8 border-ink-cyan mb-8 shadow-md">
+             <p className="text-base font-bold text-white leading-relaxed">
                {room.result.description}
              </p>
            </div>
 
+           {/* Ingredients Section */}
            <div className="mb-12">
-             <h3 className="text-ink-cyan font-black text-sm uppercase tracking-widest mb-4 flex items-center gap-2">
-               <span className="w-8 h-1 bg-ink-cyan rounded-full" />
-               Ingredients Used
+             <h3 className="text-white font-black text-lg mb-4 flex items-center gap-3">
+               <div className="w-3 h-8 bg-ink-lime skew-x-12 rounded-sm" />
+               USED INGREDIENTS
              </h3>
              <div className="flex flex-wrap gap-2">
                 {room.ingredients.map((ing) => (
-                  <span key={ing.id} className="bg-ink-base border border-ink-surface/50 text-gray-300 px-3 py-1 rounded-lg text-sm">
+                  <span key={ing.id} className="bg-ink-base text-white border-2 border-ink-surface px-4 py-3 rounded-xl font-bold text-base shadow-sm">
                     {ing.text}
                   </span>
                 ))}
              </div>
            </div>
 
+           {/* Action Button */}
            <InkButton 
               onClick={() => router.push('/')}
-              variant="secondary"
+              variant="primary"
               size="lg"
-              className="w-full font-black text-xl py-6"
+              className="w-full h-14 font-black text-xl shadow-[0_4px_0_#000] active:shadow-none active:translate-y-1 transition-all"
            >
-              <RefreshCw className="mr-2 w-6 h-6" />
+              <RefreshCw className="mr-3 w-6 h-6" />
               もう一度遊ぶ
            </InkButton>
         </div>
