@@ -126,33 +126,52 @@ export default function RoomPage() {
     }
   };
 
+  // --- COMMONS ---
+  const containerClass = "flex-1 flex flex-col items-center w-full max-w-2xl mx-auto gap-6 p-4 md:p-6";
+  const labelClass = "block text-sm font-bold text-ink-cyan uppercase tracking-wider mb-1 px-2";
+  // Sticker style input: White background, black text, thick border
+  const inputClass = "w-full h-14 px-4 bg-white border-4 border-ink-base rounded-xl focus:border-ink-magenta focus:ring-4 focus:ring-ink-magenta/30 outline-none text-black font-black placeholder-gray-400 transition-all text-xl shadow-[4px_4px_0_rgba(0,0,0,0.2)] transform focus:-rotate-1";
+  const cardBaseClass = "bg-ink-surface border-2 border-white/10 rounded-2xl p-6 shadow-xl relative overflow-hidden";
+
   // --- JOIN SCREEN ---
   if (!player) {
     return (
-      <InkLayout className="items-center justify-center">
-        <InkCard variant="neon" className="w-full max-w-md p-0 overflow-hidden" decoration="splat">
-          <div className="bg-ink-base/50 p-8 space-y-8">
-            <div className="text-center space-y-2">
-              <h1 className="text-3xl font-black text-white italic transform -rotate-2">JOIN ROOM</h1>
-              <div className="inline-block px-6 py-2 bg-ink-cyan text-ink-base font-black text-2xl rotate-2 rounded-sm shadow-lg">
-                ID: {roomId}
+      <InkLayout className="items-center justify-center p-4">
+        <InkCard variant="neon" className="w-full max-w-md p-0 overflow-hidden shadow-2xl transform rotate-1" decoration="splat">
+          <div className="bg-ink-base/80 p-6 md:p-8 space-y-8 backdrop-blur-sm relative">
+            {/* Top Tape */}
+            <div className="absolute -top-3 left-1/2 -translate-x-1/2 w-32 h-8 tape" />
+
+            <div className="text-center space-y-6 relative">
+              <h1 className="text-5xl font-black text-white italic transform -rotate-3 text-shadow-lg leading-tight">
+                JOIN<br/><span className="text-ink-cyan">ROOM</span>
+              </h1>
+              <div className="relative inline-block group cursor-default">
+                <div className="absolute -inset-2 bg-ink-magenta blur-lg opacity-50 group-hover:opacity-80 transition-opacity" />
+                <div className="relative px-8 py-3 bg-white text-ink-base font-black text-4xl rotate-2 rounded-sm border-4 border-black box-shadow-sticker group-hover:box-shadow-sticker-hover transition-all">
+                  {roomId}
+                </div>
+                {/* ID Tape */}
+                <div className="absolute -top-3 -right-4 w-12 h-6 tape rotate-45 opacity-80" />
+                <div className="absolute -bottom-2 -left-3 w-10 h-6 tape -rotate-12 opacity-80" />
               </div>
             </div>
             
-            <form onSubmit={handleJoin} className="space-y-6">
-              <div className="space-y-2">
-                <label className="block text-sm font-bold text-ink-magenta uppercase tracking-wider">Nickname</label>
+            <form onSubmit={handleJoin} className="space-y-6 pt-4">
+              <div className="space-y-1">
+                <label htmlFor="nickname" className={labelClass}>Nickname</label>
                 <input
+                  id="nickname"
                   type="text"
                   value={nickname}
                   onChange={(e) => setNickname(e.target.value)}
-                  className="w-full px-4 py-4 bg-ink-base border-4 border-ink-surface rounded-xl focus:border-ink-pink focus:outline-none text-white font-bold placeholder-gray-600 transition-all text-lg"
-                  placeholder="例: イカした名前"
+                  className={inputClass}
+                  placeholder="イカした名前"
                   maxLength={10}
                 />
               </div>
               {error && (
-                <div className="text-white text-sm font-bold bg-red-500/80 p-3 rounded-lg animate-bounce-slight text-center border-2 border-red-500">
+                <div role="alert" className="text-white text-sm font-bold bg-red-500/90 p-4 rounded-xl text-center border-4 border-red-700 shadow-md rotate-1">
                   {error}
                 </div>
               )}
@@ -161,7 +180,7 @@ export default function RoomPage() {
                 variant="primary"
                 size="lg"
                 disabled={!nickname.trim()}
-                className="w-full text-xl"
+                className="w-full h-16 text-2xl font-black shadow-lg transform active:scale-95 transition-transform"
               >
                 参加する！
               </InkButton>
@@ -174,7 +193,7 @@ export default function RoomPage() {
 
   if (!room) return (
     <InkLayout className="items-center justify-center">
-      <div className="text-4xl font-black text-white animate-bounce text-stroke-2 text-stroke-black">
+      <div className="text-4xl font-black text-white animate-bounce drop-shadow-lg" role="status">
         LOADING...
       </div>
     </InkLayout>
@@ -185,106 +204,121 @@ export default function RoomPage() {
   return (
     <InkLayout>
       {/* HEADER */}
-      <div className="flex justify-between items-center mb-8 bg-ink-surface/60 backdrop-blur-md p-4 rounded-full border-2 border-white/5 shadow-xl sticky top-4 z-50">
-        <div className="flex items-center gap-4">
-          <div className="bg-ink-magenta p-2 rounded-full shadow-lg">
-            <ChefHat className="w-6 h-6 text-white" />
+      <header className="sticky top-4 z-50 w-full max-w-4xl mx-auto px-4">
+        <div className="flex justify-between items-center bg-ink-base/90 backdrop-blur-md p-2 pl-4 pr-2 rounded-full border-2 border-white/20 shadow-xl">
+          <div className="flex items-center gap-4">
+            <div className="bg-gradient-to-br from-ink-magenta to-ink-purple p-2.5 rounded-full shadow-inner border-2 border-white/10">
+              <ChefHat className="w-6 h-6 text-white" />
+            </div>
+            <div className="leading-none">
+              <div className="text-[10px] font-bold text-ink-cyan uppercase tracking-widest mb-1">Room ID</div>
+              <div className="text-2xl font-black text-white font-mono tracking-tighter">{roomId}</div>
+            </div>
           </div>
-          <div className="leading-tight">
-            <div className="text-xs font-bold text-ink-cyan uppercase tracking-widest">Room ID</div>
-            <div className="text-xl font-black text-white font-mono tracking-tighter">{roomId}</div>
+          <div className="flex items-center gap-2 bg-ink-surface px-5 py-2.5 rounded-full border-2 border-ink-lime/30 shadow-inner">
+            <Users className="w-5 h-5 text-ink-lime" />
+            <span className="text-xl font-bold text-white tabular-nums">{room.players.length}</span>
           </div>
         </div>
-        <div className="flex items-center gap-2 bg-ink-base/80 px-4 py-2 rounded-full border border-white/10">
-          <Users className="w-4 h-4 text-ink-lime" />
-          <span className="text-lg font-bold text-white">{room.players.length}</span>
-        </div>
-      </div>
+      </header>
 
       {/* LOBBY PHASE */}
       {room.phase === 'LOBBY' && (
-        <div className="flex-1 flex flex-col items-center gap-8">
+        <main className={containerClass}>
           
-          <div className="w-full bg-ink-cyan/10 border-2 border-ink-cyan/30 p-4 rounded-2xl text-center backdrop-blur-sm animate-pulse">
-            <p className="text-xl font-black text-white text-shadow-sm">
-             みんなで、<span className="text-ink-cyan text-2xl">30秒以内</span>に材料を入力すると<br/>
-             <span className="text-ink-magenta text-2xl">AIシェフ</span>が料理してくれる！
+          <section className="w-full bg-ink-cyan/10 border-4 border-ink-cyan/30 p-6 rounded-3xl text-center backdrop-blur-sm relative overflow-hidden">
+             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-ink-cyan to-transparent opacity-50" />
+            <p className="text-lg md:text-xl font-bold text-white leading-relaxed relative z-10">
+             みんなで、<span className="text-ink-cyan font-black text-2xl mx-1 inline-block transform -rotate-2">30秒以内</span>に材料を入力すると<br className="hidden md:block"/>
+             <span className="text-ink-magenta font-black text-2xl mx-1 inline-block transform rotate-1">AIシェフ</span>が料理してくれる！
             </p>
-          </div>
+          </section>
 
-          <div className="grid md:grid-cols-2 gap-8 w-full">
-            <InkCard variant="glass" className="flex flex-col items-center justify-center gap-6 py-10">
-              <div className="text-center">
-                <h2 className="text-2xl font-black text-white mb-2">WAITING...</h2>
-                <div className="text-sm font-bold text-ink-lime bg-ink-base/50 px-3 py-1 rounded-full inline-block">
-                  ホストの開始を待っています
+          <div className="grid md:grid-cols-2 gap-6 w-full pb-24 md:pb-0">
+            {/* Waiting Status Card (Poster Style) */}
+            <div className="relative group">
+              {/* Tapes */}
+              <div className="absolute -top-2 left-1/2 -translate-x-1/2 w-24 h-6 tape z-20" />
+              <div className="absolute bottom-4 -right-2 w-16 h-6 tape rotate-45 z-20" />
+
+              <InkCard variant="glass" className="flex flex-col items-center justify-center gap-8 py-12 border-4 border-white/10 bg-ink-base/40 backdrop-blur-md">
+                <div className="text-center space-y-3">
+                  <h2 className="text-4xl font-black text-white tracking-tight drop-shadow-md italic transform -rotate-1">WAITING...</h2>
+                  <div className="inline-block bg-ink-lime text-black px-4 py-1.5 rounded-sm text-sm font-black border-2 border-black transform rotate-1 shadow-sm">
+                    ホストの開始を待っています
+                  </div>
                 </div>
-              </div>
 
-              <div className="bg-white p-4 rounded-xl shadow-xl transform rotate-2 border-4 border-ink-base">
-                {shareUrl && <QRCode value={shareUrl} size={150} />}
-              </div>
-
-              <div className="flex items-center gap-2 w-full max-w-xs">
-                <div className="flex-1 bg-ink-base/80 px-3 py-2 rounded-lg border border-white/10 text-xs font-mono text-gray-400 truncate">
-                  {shareUrl}
+                <div className="bg-white p-4 pb-8 pt-6 rounded-sm shadow-xl transform rotate-1 border-4 border-gray-200 relative">
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 w-16 h-8 tape opacity-50" />
+                  {shareUrl && <QRCode value={shareUrl} size={160} />}
+                  <div className="absolute bottom-2 right-2 text-[10px] font-mono text-gray-400 font-bold">SCAN ME</div>
                 </div>
-                <button 
-                  onClick={handleCopyUrl}
-                  className="bg-ink-surface p-2 rounded-lg hover:bg-ink-surface/80 text-white transition-colors"
-                >
-                  {copied ? <Check className="w-4 h-4 text-ink-lime" /> : <Copy className="w-4 h-4" />}
-                </button>
-              </div>
-            </InkCard>
 
-            <div className="space-y-4">
-              <div className="flex items-center gap-2 px-2">
-                <User className="w-5 h-5 text-ink-magenta" />
-                <h3 className="font-black text-white text-lg uppercase italic">Players</h3>
-              </div>
-              <div className="grid grid-cols-1 gap-3">
-                {room.players.map((p, i) => (
-                  <div 
-                    key={p.id} 
-                    className="flex items-center gap-4 bg-ink-surface border-2 border-ink-base/50 p-3 rounded-2xl shadow-lg transform hover:-translate-y-1 transition-transform"
-                    style={{ transform: `rotate(${i % 2 === 0 ? '1deg' : '-1deg'})` }}
+                <div className="flex items-center gap-2 w-full max-w-xs relative">
+                  <div className="flex-1 px-4 py-3 bg-black/50 rounded-xl border border-white/10 text-xs font-mono text-ink-cyan truncate select-all shadow-inner">
+                    {shareUrl}
+                  </div>
+                  <button 
+                    onClick={handleCopyUrl}
+                    className="bg-ink-surface hover:bg-ink-surface/80 p-3 rounded-xl text-white transition-colors focus:ring-2 focus:ring-ink-cyan border-2 border-white/5 active:scale-95"
+                    aria-label="URLをコピー"
                   >
-                    <div className="w-12 h-12 bg-gradient-to-tr from-ink-purple to-ink-magenta rounded-full flex items-center justify-center text-white font-bold border-2 border-white/20">
+                    {copied ? <Check className="w-5 h-5 text-ink-lime" /> : <Copy className="w-5 h-5" />}
+                  </button>
+                </div>
+              </InkCard>
+            </div>
+
+            {/* Players List */}
+            <div className={cardBaseClass}>
+              <div className="flex items-center gap-3 mb-6 border-b-4 border-dashed border-white/10 pb-4">
+                <User className="w-6 h-6 text-ink-magenta" />
+                <h3 className="font-black text-white text-xl uppercase italic">Players</h3>
+              </div>
+              <ul className="grid grid-cols-1 gap-3">
+                {room.players.map((p, i) => (
+                  <li 
+                    key={p.id} 
+                    className="flex items-center gap-4 bg-ink-base border-l-8 border-ink-surface p-3 rounded-r-xl shadow-sm hover:translate-x-1 transition-transform"
+                    style={{ borderLeftColor: i === 0 ? 'var(--color-ink-yellow)' : 'var(--color-ink-surface)' }}
+                  >
+                    <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center text-ink-base text-lg font-black border-2 border-black">
                       {p.nickname[0]}
                     </div>
-                    <span className="font-black text-white text-lg flex-1">{p.nickname}</span>
+                    <span className="font-bold text-white text-lg flex-1 truncate">{p.nickname}</span>
                     {room.players[0].id === p.id && (
-                      <Crown className="w-6 h-6 text-ink-yellow drop-shadow-md" />
+                      <Crown className="w-6 h-6 text-ink-yellow drop-shadow-md shrink-0 animate-bounce-slight" aria-label="Host" />
                     )}
-                  </div>
+                  </li>
                 ))}
-              </div>
+              </ul>
             </div>
           </div>
 
           {isHost && (
-            <div className="fixed bottom-8 left-0 right-0 px-4 md:relative md:bottom-auto">
+            <div className="fixed bottom-6 left-4 right-4 md:static md:w-full md:max-w-md z-40">
               <InkButton
                 onClick={handleStart}
                 variant="accent"
                 size="xl"
-                className="w-full max-w-md mx-auto shadow-[0_0_30px_rgba(204,255,0,0.4)] animate-bounce-slight"
+                className="w-full shadow-[0_0_20px_rgba(204,255,0,0.5)] text-2xl font-black h-20 border-4 border-white/20 transform hover:scale-105 active:scale-95 transition-all"
               >
                 ゲームスタート！
               </InkButton>
             </div>
           )}
-        </div>
+        </main>
       )}
 
       {/* GAME PHASE */}
       {room.phase === 'COUNTDOWN' && (
-        <div className="flex-1 flex flex-col items-center w-full max-w-2xl mx-auto">
+        <main className={containerClass}>
           {/* Timer */}
-          <div className="relative mb-12 transform hover:scale-105 transition-transform duration-300">
-             <svg className="w-48 h-48 -rotate-90 drop-shadow-[0_0_15px_rgba(240,0,255,0.5)]" viewBox="0 0 100 100">
-              <circle cx="50" cy="50" r="45" fill="none" stroke="#0B1021" strokeWidth="12" />
+          <div className="relative mb-8 transform transition-transform duration-300 hover:scale-105 group">
+             <div className="absolute inset-0 bg-ink-magenta/20 blur-xl rounded-full group-hover:bg-ink-magenta/30 transition-colors" />
+             <svg className="w-56 h-56 -rotate-90 filter drop-shadow-[0_0_15px_rgba(240,0,255,0.4)]" viewBox="0 0 100 100" aria-hidden="true">
+              <circle cx="50" cy="50" r="45" fill="#0B1021" stroke="#1E293B" strokeWidth="8" />
               <circle
                 cx="50" cy="50" r="45" fill="none" stroke="url(#timer-gradient)" strokeWidth="12"
                 strokeDasharray="283"
@@ -300,48 +334,58 @@ export default function RoomPage() {
               </defs>
             </svg>
             <div className="absolute inset-0 flex items-center justify-center flex-col">
-              <span className="text-6xl font-black text-white font-mono drop-shadow-md">{timeLeft}</span>
-              <span className="text-xs font-bold text-ink-magenta uppercase tracking-widest mt-1">SECONDS</span>
+              <span className="text-7xl font-black text-white font-mono drop-shadow-md tabular-nums transform -rotate-3 text-shadow-lg">{timeLeft}</span>
+              <span className="text-sm font-black text-ink-magenta uppercase tracking-widest mt-2 bg-black px-2 py-0.5 transform rotate-2">SECONDS</span>
             </div>
           </div>
 
-          <form onSubmit={handleSubmitIngredient} className="w-full space-y-4 mb-8">
-            <div className="relative">
-              <input
-                type="text"
-                value={ingredient}
-                onChange={(e) => setIngredient(e.target.value)}
-                placeholder="材料を入力 (例: ドラゴンフルーツ)"
-                className="w-full px-6 py-5 bg-ink-base border-4 border-ink-surface rounded-3xl focus:border-ink-cyan outline-none text-2xl font-bold text-white placeholder-gray-700 transition-all shadow-inner"
-                maxLength={20}
-                autoFocus
-              />
-              <button
-                type="submit"
-                disabled={!ingredient.trim()}
-                className="absolute right-3 top-3 bottom-3 aspect-square bg-ink-magenta rounded-2xl flex items-center justify-center text-white hover:bg-ink-pink disabled:opacity-50 disabled:hover:bg-ink-magenta transition-colors shadow-lg"
-              >
-                <Send className="w-6 h-6" />
-              </button>
+          <form onSubmit={handleSubmitIngredient} className="w-full space-y-2 relative">
+             <div className="absolute -top-4 -left-2 w-16 h-6 tape -rotate-6 z-10" />
+            
+            <div className="bg-ink-surface p-4 pt-6 pb-6 rounded-3xl border-2 border-white/5 relative">
+              <label htmlFor="ingredient-input" className={labelClass}>
+                材料を入力
+              </label>
+              <div className="flex gap-4">
+                <input
+                  id="ingredient-input"
+                  type="text"
+                  value={ingredient}
+                  onChange={(e) => setIngredient(e.target.value)}
+                  placeholder="例: ドラゴンフルーツ"
+                  className={`${inputClass} text-xl`}
+                  maxLength={20}
+                  autoFocus
+                  autoComplete="off"
+                />
+                <button
+                  type="submit"
+                  disabled={!ingredient.trim()}
+                  className="aspect-square h-14 bg-ink-magenta hover:bg-ink-pink disabled:opacity-50 disabled:bg-gray-700 disabled:text-gray-500 rounded-xl flex items-center justify-center text-white transition-all shadow-[4px_4px_0_rgba(0,0,0,0.5)] active:shadow-none active:translate-y-1 focus:ring-4 focus:ring-ink-magenta/30 outline-none border-4 border-black box-border"
+                  aria-label="送信"
+                >
+                  <Send className="w-6 h-6 transform -rotate-12" />
+                </button>
+              </div>
             </div>
-            <p className="text-center text-ink-cyan font-bold text-sm animate-pulse">
+            <p className="text-center text-ink-cyan font-black text-lg mt-4 animate-pulse transform rotate-1">
               どんどん送信しよう！
             </p>
           </form>
 
-          <div className="w-full bg-ink-surface/50 rounded-3xl p-6 border-2 border-white/5 min-h-[200px]">
-             <div className="flex justify-between items-center mb-4">
-                <h3 className="font-bold text-white uppercase tracking-wider flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full bg-ink-lime animate-pulse" />
+          <div className={`${cardBaseClass} w-full min-h-[200px] mt-4`}>
+             <div className="flex justify-between items-center mb-6 pb-4 border-b-2 border-dashed border-white/10">
+                <h3 className="font-bold text-white text-lg uppercase tracking-wider flex items-center gap-3">
+                  <div className="w-3 h-3 rounded-full bg-ink-lime animate-pulse shadow-[0_0_10px_#CCFF00]" />
                   みんなの材料
                 </h3>
-                <span className="font-mono text-ink-cyan">{room.ingredients.length}</span>
+                <span className="font-mono text-2xl font-black text-ink-cyan transform -rotate-6 inline-block">{room.ingredients.length}</span>
              </div>
              <div className="flex flex-wrap gap-3">
                 {room.ingredients.map((ing, i) => (
                   <span 
                     key={ing.id} 
-                    className="bg-ink-base border-2 border-ink-surface text-white px-4 py-2 rounded-xl font-bold text-sm shadow-md animate-in zoom-in duration-300"
+                    className="bg-white text-black border-2 border-black px-4 py-2 rounded-sm font-black text-sm shadow-[2px_2px_0_rgba(0,0,0,0.3)] animate-in zoom-in duration-300"
                     style={{ 
                       animationDelay: `${i * 50}ms`,
                       transform: `rotate(${Math.random() * 6 - 3}deg)`
@@ -350,49 +394,59 @@ export default function RoomPage() {
                     {ing.text}
                   </span>
                 ))}
+                {room.ingredients.length === 0 && (
+                  <p className="text-gray-500 font-bold text-center w-full py-8 opacity-50">
+                    まだ材料はありません...
+                  </p>
+                )}
              </div>
           </div>
-        </div>
+        </main>
       )}
 
       {/* COOKING PHASE */}
       {room.phase === 'COOKING' && (
-        <div className="flex-1 flex flex-col items-center justify-center text-center">
-          <div className="relative w-64 h-64 mb-12">
-            <div className="absolute inset-0 bg-ink-magenta/20 blur-[60px] rounded-full animate-pulse" />
+        <main className="flex-1 flex flex-col items-center justify-center text-center p-6">
+          <div className="relative w-72 h-72 mb-12">
+            <div className="absolute inset-0 bg-ink-magenta/10 blur-[80px] rounded-full animate-pulse" />
             <div className="absolute inset-0 flex items-center justify-center">
-              <ChefHat className="w-32 h-32 text-ink-lime animate-bounce-slight drop-shadow-[0_4px_0_rgba(0,0,0,0.5)]" />
+              <ChefHat className="w-36 h-36 text-ink-lime animate-bounce-slight drop-shadow-[0_8px_0_rgba(0,0,0,0.3)]" />
             </div>
-            <div className="absolute -top-4 -right-4 w-12 h-12 bg-ink-cyan rounded-full animate-float [animation-delay:0.5s]" />
-            <div className="absolute -bottom-8 -left-8 w-16 h-16 bg-ink-pink rounded-full animate-float [animation-delay:1.2s]" />
+            <div className="absolute top-0 right-0 w-16 h-16 bg-gradient-to-br from-ink-cyan to-blue-500 rounded-full animate-float opacity-80" style={{ animationDelay: '0.5s' }} />
+            <div className="absolute bottom-0 left-0 w-20 h-20 bg-gradient-to-br from-ink-pink to-red-500 rounded-full animate-float opacity-80" style={{ animationDelay: '1.2s' }} />
           </div>
           
-          <h2 className="text-4xl md:text-5xl font-black text-white italic mb-4 text-shadow-lg">
+          <h2 className="text-4xl md:text-6xl font-black text-white italic mb-6 text-shadow-lg tracking-tight transform -rotate-2">
             COOKING...
           </h2>
-          <p className="text-xl text-ink-cyan font-bold tracking-widest animate-pulse">
-            AIシェフが調理中！
-          </p>
-        </div>
+          <div className="inline-block bg-ink-surface/80 backdrop-blur px-8 py-3 rounded-full border border-white/10">
+            <p className="text-xl text-ink-cyan font-bold tracking-widest animate-pulse">
+              AIシェフが調理中！
+            </p>
+          </div>
+        </main>
       )}
 
       {/* RESULT PHASE */}
       {room.phase === 'RESULT' && room.result && (
-        <div className="flex-1 w-full max-w-md mx-auto animate-in slide-in-from-bottom duration-700 pb-8">
+        <main className={containerClass}>
            {/* Header Section */}
-           <div className="text-center mb-8 relative space-y-4">
-              <div className="inline-block bg-ink-lime text-black px-6 py-2 rounded-full text-lg font-black italic transform -rotate-2 border-2 border-black shadow-[4px_4px_0_rgba(0,0,0,1)]">
+           <div className="text-center w-full mb-4">
+              <div className="inline-block bg-ink-lime text-black px-8 py-2 rounded-full text-xl font-black italic transform -rotate-1 border-4 border-black shadow-[4px_4px_0_black] mb-6">
                 DISH COMPLETE!
               </div>
-              <h2 className="text-3xl font-black text-white bg-ink-surface px-6 py-4 rounded-2xl border-2 border-white/10 shadow-lg leading-tight break-words">
+              <h2 className="text-3xl md:text-4xl font-black text-white bg-ink-surface px-8 py-6 rounded-3xl border-4 border-white/5 shadow-xl leading-tight break-words relative overflow-hidden">
+                <div className="absolute -left-4 -top-4 w-12 h-12 bg-ink-magenta/20 rounded-full blur-xl" />
                 {room.result.dishName}
               </h2>
            </div>
 
            {/* Image Section */}
-           <div className="mb-8">
-             <InkCard variant="neon" className="p-1 mb-2 bg-ink-base border-ink-magenta transform rotate-1">
-                <div className="relative aspect-video bg-black rounded-xl overflow-hidden">
+           <div className="w-full relative group">
+             <div className="absolute top-4 left-1/2 -translate-x-1/2 w-32 h-8 tape z-20 opacity-80" />
+             <div className="absolute inset-0 bg-gradient-to-tr from-ink-magenta via-transparent to-ink-cyan opacity-20 blur-xl group-hover:opacity-30 transition-opacity" />
+             <InkCard variant="neon" className="p-2 bg-white border-4 border-white transform rotate-1 transition-transform group-hover:rotate-0 duration-500 shadow-2xl">
+                <div className="relative aspect-video bg-black rounded-sm overflow-hidden border border-gray-200">
                    {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img 
                     src={room.result.imageUrl} 
@@ -401,8 +455,8 @@ export default function RoomPage() {
                   />
                 </div>
              </InkCard>
-             <div className="flex justify-end px-2">
-                <div className="bg-black/80 backdrop-blur-md px-3 py-1 rounded-full border border-ink-magenta/50 flex items-center gap-2">
+             <div className="absolute bottom-6 right-6 z-20">
+                <div className="bg-black/80 backdrop-blur-md px-4 py-1.5 rounded-sm border-l-4 border-ink-magenta flex items-center gap-2 shadow-lg transform -rotate-1">
                   <Sparkles className="w-4 h-4 text-ink-magenta" />
                   <span className="text-white text-xs font-bold tracking-wider">AI GENERATED</span>
                 </div>
@@ -410,21 +464,22 @@ export default function RoomPage() {
            </div>
 
            {/* Description Section */}
-           <div className="bg-ink-surface p-6 rounded-3xl border-l-8 border-ink-cyan mb-8 shadow-md">
-             <p className="text-base font-bold text-white leading-relaxed">
+           <div className="w-full bg-ink-surface p-8 rounded-3xl border-l-[12px] border-ink-cyan shadow-md relative">
+             <div className="absolute -top-3 right-8 w-16 h-8 tape rotate-3 opacity-50" />
+             <p className="text-lg font-bold text-white leading-loose tracking-wide">
                {room.result.description}
              </p>
            </div>
 
            {/* Ingredients Section */}
-           <div className="mb-12">
-             <h3 className="text-white font-black text-lg mb-4 flex items-center gap-3">
-               <div className="w-3 h-8 bg-ink-lime skew-x-12 rounded-sm" />
+           <div className="w-full mb-8">
+             <h3 className="text-white font-black text-xl mb-4 flex items-center gap-3 pl-2">
+               <div className="w-4 h-8 bg-ink-lime skew-x-12 rounded-sm" />
                USED INGREDIENTS
              </h3>
-             <div className="flex flex-wrap gap-2">
+             <div className="flex flex-wrap gap-3">
                 {room.ingredients.map((ing) => (
-                  <span key={ing.id} className="bg-ink-base text-white border-2 border-ink-surface px-4 py-3 rounded-xl font-bold text-base shadow-sm">
+                  <span key={ing.id} className="bg-ink-base text-gray-200 border-2 border-ink-surface px-5 py-3 rounded-xl font-bold text-base shadow-sm">
                     {ing.text}
                   </span>
                 ))}
@@ -432,16 +487,18 @@ export default function RoomPage() {
            </div>
 
            {/* Action Button */}
-           <InkButton 
-              onClick={() => router.push('/')}
-              variant="primary"
-              size="lg"
-              className="w-full h-14 font-black text-xl shadow-[0_4px_0_#000] active:shadow-none active:translate-y-1 transition-all"
-           >
-              <RefreshCw className="mr-3 w-6 h-6" />
-              もう一度遊ぶ
-           </InkButton>
-        </div>
+           <div className="w-full sticky bottom-6 z-40">
+             <InkButton 
+                onClick={() => router.push('/')}
+                variant="primary"
+                size="lg"
+                className="w-full h-20 font-black text-2xl shadow-[0_8px_0_#000] border-4 border-white/20 active:translate-y-2 active:shadow-[0_0px_0_#000]"
+             >
+                <RefreshCw className="mr-3 w-8 h-8" />
+                もう一度遊ぶ
+             </InkButton>
+           </div>
+        </main>
       )}
     </InkLayout>
   );

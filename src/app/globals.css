@@ -56,8 +56,10 @@ body {
   min-height: 100vh;
   overflow-x: hidden;
   background-image: 
-    radial-gradient(circle at 10% 20%, rgba(240, 0, 255, 0.05) 0%, transparent 20%),
-    radial-gradient(circle at 90% 80%, rgba(0, 255, 255, 0.05) 0%, transparent 20%);
+    radial-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+    radial-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+  background-size: 20px 20px;
+  background-position: 0 0, 10px 10px;
 }
 
 /* Custom Utilities */
@@ -73,17 +75,34 @@ body {
   }
   
   .box-shadow-sticker {
-    box-shadow: 0 4px 0 rgba(0, 0, 0, 0.3);
+    box-shadow: 2px 4px 0 rgba(0, 0, 0, 0.4);
   }
   
   .box-shadow-sticker-hover {
-    box-shadow: 0 6px 0 rgba(0, 0, 0, 0.3);
+    box-shadow: 4px 6px 0 rgba(0, 0, 0, 0.4);
     transform: translateY(-2px);
   }
   
   .box-shadow-sticker-active {
-    box-shadow: 0 0 0 rgba(0, 0, 0, 0.3);
-    transform: translateY(4px);
+    box-shadow: 0 0 0 rgba(0, 0, 0, 0.4);
+    transform: translateY(2px);
+  }
+
+  .tape {
+    background-color: rgba(255, 255, 255, 0.4);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+    backdrop-filter: blur(2px);
+    border: 1px solid rgba(255,255,255,0.2);
+    transform: rotate(-2deg);
+  }
+
+  .tape:after {
+    content: '';
+    position: absolute;
+    left: -5px; right: -5px; top: 0; bottom: 0;
+    background: transparent;
+    border-left: 2px dashed rgba(0,0,0,0.1);
+    border-right: 2px dashed rgba(0,0,0,0.1);
   }
 }
 
