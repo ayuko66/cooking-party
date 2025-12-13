@@ -3,7 +3,7 @@ import { store } from '@/lib/store';
 import { generateDish, generateImage } from '@/lib/ai';
 
 export async function POST(request: Request) {
-  const { roomId } = await request.json();
+  const { roomId, isDev } = await request.json();
 
   if (!roomId) {
     return NextResponse.json({ error: 'Missing roomId' }, { status: 400 });
@@ -21,6 +21,16 @@ export async function POST(request: Request) {
   // 実際のサーバーレス環境ではプロセスがキルされる可能性があるが、MVP/Docker環境では問題ない
   (async () => {
     try {
+      if (isDev) {
+        // Devモード: 固定レスポンス
+        store.setResult(roomId, {
+          dishName: 'DEV MODE カレー',
+          description: 'これは開発モード用の固定レスポンスです。APIは使用されていません。',
+          imageUrl: 'https://placehold.co/600x400?text=DEV+MODE',
+        });
+        return;
+      }
+
       const ingredients = room.ingredients.map(i => i.text);
       
       let dishName, description, imageUrl;

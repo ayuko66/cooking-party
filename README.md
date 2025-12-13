@@ -46,3 +46,4 @@
    docker-compose up --build
    ```
 4. ブラウザで `http://localhost:3000` にアクセスします。
+5. (オプション) デモ/開発モード: `http://localhost:3000/?dev=true` にアクセスすると、AI APIを消費せずに動作確認が可能です。

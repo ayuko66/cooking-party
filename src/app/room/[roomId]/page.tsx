@@ -9,11 +9,13 @@ import { InkLayout } from '@/components/ui/ink-layout';
 import { InkButton } from '@/components/ui/ink-button';
 import { InkCard } from '@/components/ui/ink-card';
 import { cn } from '@/lib/utils';
+import { useDevMode } from '@/components/dev-mode-provider';
 
 export default function RoomPage() {
   const params = useParams();
   const router = useRouter();
   const roomId = decodeURIComponent(params.roomId as string).toUpperCase();
+  const isDev = useDevMode();
 
   const [nickname, setNickname] = useState('');
   const [player, setPlayer] = useState<Player | null>(null);
@@ -77,7 +79,7 @@ export default function RoomPage() {
     if (timeLeft === 0 && room?.phase === 'COUNTDOWN' && room.players[0].id === player?.id) {
        fetch('/api/rooms/cook', {
          method: 'POST',
-         body: JSON.stringify({ roomId }),
+         body: JSON.stringify({ roomId, isDev }),
        });
     }
   }, [timeLeft, room?.phase, room?.players, player?.id, roomId]);

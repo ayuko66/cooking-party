@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { DevModeProvider } from "@/components/dev-mode-provider";
+import { Suspense } from "react";
 
 export const metadata: Metadata = {
   title: "Cooking Party",
@@ -13,7 +15,13 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ja">
-      <body>{children}</body>
+      <body>
+        <Suspense>
+          <DevModeProvider>
+            {children}
+          </DevModeProvider>
+        </Suspense>
+      </body>
     </html>
   );
 }
