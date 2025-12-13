@@ -23,7 +23,7 @@
 - **スタイリング**: Tailwind CSS
 - **AI**:
   - テキスト生成: Groq API (Llama 3 / Mixtral)
-  - 画像生成: Stability AI API
+  - 画像生成: Google Gemini 2.5 Flash Image (Nano Banana)
 - **インフラ**: Docker
 
 ## 環境構築 (開発者向け)
@@ -31,7 +31,7 @@
 ### 必要要件
 - Docker / Docker Compose
 - Groq API Key
-- Stability AI API Key
+- Google API Key (Gemini)
 
 ### 起動方法
 
@@ -39,7 +39,7 @@
 2. `.env` ファイルを作成し、APIキーを設定します。
    ```env
    GROQ_API_KEY=your_groq_api_key
-   STABILITY_API_KEY=your_stability_api_key
+   GOOGLE_API_KEY=your_google_api_key
    ```
 3. Docker Compose で起動します。
    ```bash

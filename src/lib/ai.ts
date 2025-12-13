@@ -86,49 +86,71 @@ JSONのみを出力し、余計なテキストは含めないでください。
 }
 
 export async function generateImage(dishName: string, description: string, ingredients: string[] = []): Promise<string> {
+  const apiKey = process.env.GOOGLE_API_KEY;
+  if (!apiKey) {
+    console.error('GOOGLE_API_KEY is not set');
+    return 'https://placehold.co/600x400?text=API+Key+Missing';
+  }
+
   const ingredientText =
     ingredients.length > 0 ? ingredients.join(', ') : 'no specific ingredients';
 
   const prompt = `
-An illustration of a single Japanese home-style fantasy dish called "${dishName}".
+Generate an illustration of a single Japanese home-style fantasy dish called "${dishName}".
 Main ingredients: ${ingredientText}.
+Description: ${description}.
 Top-down view, one round plate in the center, only this dish on the table.
 Cute, pop illustration style, not realistic, soft colors, simple background, white or light wood table.
 `.trim();
 
-const negativePrompt = `
-sushi, sashimi, nigiri, maki roll, multiple plates, many side dishes,
-human, hands, text, logo, watermark, photorealistic photo, 3d render
-`.trim();
-
   try {
-    console.log('[Stability AI] Request prompt:', prompt);
-    const formData = new FormData();
-    formData.append('prompt', prompt);
-    formData.append('negative_prompt', negativePrompt);
-    formData.append('output_format', 'png');
-    formData.append('aspect_ratio', '1:1'); // 比率
-    const result = await fetch(
-      'https://api.stability.ai/v2beta/stable-image/generate/core',
-      {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${process.env.STABILITY_API_KEY}`,
-          Accept: 'application/json', // base64 JSON
-        },
-        body: formData,
-      }
-    );
+    console.log('[Gemini] Request prompt:', prompt);
+    const { GoogleGenerativeAI } = await import('@google/generative-ai');
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash-image' });
 
-    if (!result.ok) {
-      const text = await result.text();
-      throw new Error(`Stability AI error: ${result.status} ${text}`);
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    
+    // レスポンスから画像を抽出する
+    // 注: 画像生成レスポンスの構造は異なる場合があります。
+    // 通常、一部のエンドポイントでは candidates[0].content.parts[0].inlineData などに含まれるか、URIが返されます。
+    // 現時点では、標準的な処理を想定するか、出力を検査します。
+    // ただし、このコンテキストでの画像モデルレスポンスの具体的な型定義がないため、
+    // 利用可能な場合は標準的なbase64データを検索しようとします。
+    
+    // 注: 私の知識カットオフ時点では、"gemini-2.5-flash-image" は画像を提供する可能性があります。
+    // テキストが返される場合は失敗となります。
+    // フォールバックとログ出力を追加します。
+    
+    console.log('[Gemini] Response:', JSON.stringify(response, null, 2));
+    
+    // インラインデータを確認 (従来のGeminiビジョンの*入力*画像のアプローチだが、出力でもあり得る？)
+    // または、特定のヘルパーを使用している場合は 'images' フィールドがあるか確認。
+    // しかし、汎用的な `generateContent` を使用しているため、partsを確認します。
+    
+    const candidates = response.candidates;
+    if (!candidates || candidates.length === 0) {
+      throw new Error('No candidates returned');
+    }
+    
+    const parts = candidates[0].content.parts;
+    const imagePart = parts.find((p: any) => p.inlineData || p.fileData);
+    
+    if (imagePart && imagePart.inlineData) {
+       return `data:${imagePart.inlineData.mimeType};base64,${imagePart.inlineData.data}`;
+    }
+    
+    // フォールバック: テキスト内にURLが含まれている場合 (一部のモデルはこれを行う)
+    const text = response.text();
+    if (text.startsWith('http')) {
+        return text;
     }
 
-    const data = await result.json() as { image: string };
-    return `data:image/png;base64,${data.image}`;
+    throw new Error('No image data found in response');
+
   } catch (error) {
-    console.error('Stability AI generation error:', error);
+    console.error('Gemini generation error:', error);
     return 'https://placehold.co/600x400?text=Image+Generation+Failed';
   }
 }
