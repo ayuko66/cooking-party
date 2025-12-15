@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ChefHat, Send, Users, User, Copy, Check, RefreshCw, Sparkles, Clock, Crown } from 'lucide-react';
+import { ChefHat, Send, Users, User, Clipboard as ClipboardIcon, ClipboardCheck as ClipboardCheckIcon, RefreshCw, Sparkles, Clock, Crown } from 'lucide-react';
 import QRCode from 'react-qr-code';
 import { Room, Player } from '@/lib/store';
 import { InkLayout } from '@/components/ui/ink-layout';
@@ -143,56 +143,115 @@ export default function RoomPage() {
   if (!player) {
     return (
       <InkLayout className="items-center justify-center p-4">
-        <InkCard variant="neon" className="w-full max-w-md p-0 overflow-hidden shadow-2xl transform rotate-1" decoration="splat">
-          <div className="bg-ink-base/80 p-6 md:p-8 space-y-8 backdrop-blur-sm relative">
-            {/* Top Tape */}
-            <div className="absolute -top-3 left-1/2 -translate-x-1/2 w-32 h-8 tape" />
+        <div className="w-full max-w-5xl grid items-stretch gap-6 md:gap-8 md:grid-cols-[1.05fr,0.95fr]">
 
-            <div className="text-center space-y-6 relative">
-              <h1 className="text-5xl font-black text-white italic transform -rotate-3 text-shadow-lg leading-tight">
-                JOIN<br/><span className="text-ink-cyan">ROOM</span>
-              </h1>
-              <div className="relative inline-block group cursor-default">
-                <div className="absolute -inset-2 bg-ink-magenta blur-lg opacity-50 group-hover:opacity-80 transition-opacity" />
-                <div className="relative px-8 py-3 bg-white text-ink-base font-black text-4xl rotate-2 rounded-sm border-4 border-black box-shadow-sticker group-hover:box-shadow-sticker-hover transition-all">
-                  {roomId}
+          {/* Hero / Guidance */}
+          <InkCard variant="glass" className="p-0 overflow-hidden border-0 shadow-2xl order-2 md:order-1">
+            <div className="relative space-y-6 md:space-y-8">
+              <div className="absolute -inset-10 bg-gradient-to-br from-ink-magenta/15 via-transparent to-ink-cyan/15 blur-3xl" />
+              <div className="absolute top-3 left-6 w-24 h-8 tape rotate-2 opacity-80" />
+
+              <div className="flex flex-wrap items-start justify-between gap-4">
+                <div className="space-y-3">
+                  <p className="text-[11px] font-black uppercase tracking-[0.35em] text-ink-cyan">Waiting Lobby</p>
+                  <h1 className="text-4xl md:text-5xl font-black text-white italic leading-tight text-shadow-lg">
+                    JOIN <span className="text-ink-cyan drop-shadow-[0_4px_0_rgba(0,0,0,0.35)]">ROOM</span>
+                  </h1>
+                  <p className="text-white/80 font-bold leading-7 md:leading-8 text-base md:text-lg max-w-xl">
+                    ニックネームを入力して参加ボタンをタップ。合図が来たらみんなで材料を投げ込もう！
+                  </p>
                 </div>
-                {/* ID Tape */}
-                <div className="absolute -top-3 -right-4 w-12 h-6 tape rotate-45 opacity-80" />
-                <div className="absolute -bottom-2 -left-3 w-10 h-6 tape -rotate-12 opacity-80" />
+                <div className="relative shrink-0 isolation-auto">
+                  <div className="absolute -top-3 right-2 w-14 h-7 tape rotate-3 opacity-80" />
+                  <div className="relative z-20 bg-[#ffffff] text-ink-base font-black text-3xl md:text-4xl px-6 py-3 rounded-md border-[5px] border-black rotate-1 shadow-[0_10px_0_rgba(0,0,0,0.4)] font-mono tracking-[0.28em] drop-shadow-lg">
+                    {roomId}
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid sm:grid-cols-3 gap-3">
+                <div className="bg-black/40 rounded-2xl px-4 py-3 text-left shadow-inner">
+                  <p className="text-ink-cyan text-xs md:text-sm font-black uppercase tracking-[0.25em] mb-2">Step 1</p>
+                  <p className="text-white font-bold leading-snug text-base md:text-lg">ニックネームを決める</p>
+                </div>
+                <div className="bg-black/40 rounded-2xl px-4 py-3 text-left shadow-inner">
+                  <p className="text-ink-magenta text-xs md:text-sm font-black uppercase tracking-[0.25em] mb-2">Step 2</p>
+                  <p className="text-white font-bold leading-snug text-base md:text-lg">参加して合流！</p>
+                </div>
+                <div className="bg-black/40 rounded-2xl px-4 py-3 text-left shadow-inner">
+                  <p className="text-ink-lime text-xs md:text-sm font-black uppercase tracking-[0.25em] mb-2">Step 3</p>
+                  <p className="text-white font-bold leading-snug text-base md:text-lg">スタート合図を待とう</p>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2.5 bg-ink-base/70 rounded-2xl px-4 py-3 shadow-inner">
+                <div className="px-3 py-1 bg-ink-cyan text-ink-base text-[11px] font-black uppercase tracking-[0.25em] rounded-full shrink-0">
+                  Room URL
+                </div>
+                <div className="flex-1 min-w-[200px] px-3 py-2 bg-black/50 rounded-xl border border-white/5 font-mono text-sm text-white/80 truncate select-all">
+                  {shareUrl || '読み込み中...'}
+                </div>
+                <button
+                  onClick={handleCopyUrl}
+                  className="px-4 py-2 bg-white text-ink-base hover:bg-gray-100 rounded-xl border-4 border-black transition-transform active:translate-y-[1px] shadow-[3px_3px_0_rgba(0,0,0,0.35)]"
+                  aria-label="URLをコピー"
+                >
+                  {copied ? <ClipboardCheckIcon className="w-5 h-5 text-ink-base" /> : <ClipboardIcon className="w-5 h-5 text-ink-base" />}
+                </button>
               </div>
             </div>
-            
-            <form onSubmit={handleJoin} className="space-y-6 pt-4">
-              <div className="space-y-1">
-                <label htmlFor="nickname" className={labelClass}>Nickname</label>
-                <input
-                  id="nickname"
-                  type="text"
-                  value={nickname}
-                  onChange={(e) => setNickname(e.target.value)}
-                  className={inputClass}
-                  placeholder="イカした名前"
-                  maxLength={10}
-                />
-              </div>
-              {error && (
-                <div role="alert" className="text-white text-sm font-bold bg-red-500/90 p-4 rounded-xl text-center border-4 border-red-700 shadow-md rotate-1">
-                  {error}
+          </InkCard>
+
+          {/* Join Form */}
+          <InkCard variant="neon" decoration="splat" className="p-0 shadow-2xl border-0 order-1 md:order-2">
+            <div className="relative space-y-6 md:space-y-8">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="px-3 py-1 bg-ink-cyan text-ink-base text-[11px] font-black uppercase tracking-[0.25em] rounded-full">
+                    Room
+                  </div>
+                  <span className="font-mono text-white/70 tracking-[0.3em] text-sm">{roomId}</span>
                 </div>
-              )}
-              <InkButton
-                type="submit"
-                variant="primary"
-                size="lg"
-                disabled={!nickname.trim()}
-                className="w-full h-16 text-2xl font-black shadow-lg transform active:scale-95 transition-transform"
-              >
-                {nickname.trim() ? '参加する！' : '名前を入力してね'}
-              </InkButton>
-            </form>
-          </div>
-        </InkCard>
+                <div className="bg-black/60 text-white px-3 py-1 rounded-xl text-xs font-bold border border-white/10">
+                  すぐ参加できます
+                </div>
+              </div>
+
+              <form onSubmit={handleJoin} className="space-y-5">
+                <div className="space-y-2">
+                  <label htmlFor="nickname" className={labelClass}>Nickname</label>
+                  <input
+                    id="nickname"
+                    type="text"
+                    value={nickname}
+                    onChange={(e) => setNickname(e.target.value)}
+                    className={cn(inputClass, "h-14 md:h-16 text-xl bg-white/90 text-ink-base border-ink-cyan/80 shadow-inner")}
+                    placeholder="イカした名前"
+                    maxLength={10}
+                  />
+                  <p className="text-sm text-white/60 font-medium px-2">最大10文字・みんなに見える名前だよ</p>
+                </div>
+
+                {error && (
+                  <div role="alert" className="text-white text-sm font-bold bg-red-500/90 p-4 rounded-xl text-center border-4 border-red-700 shadow-md rotate-1">
+                    {error}
+                  </div>
+                )}
+
+                <InkButton
+                  type="submit"
+                  variant="primary"
+                  size="lg"
+                  disabled={!nickname.trim()}
+                  className="w-full h-14 md:h-16 text-xl font-black shadow-lg transform active:scale-95 transition-transform mb-[10px]"
+                >
+                  {nickname.trim() ? '参加する！' : '名前を入力してね'}
+                </InkButton>
+              </form>
+            </div>
+          </InkCard>
+
+        </div>
       </InkLayout>
     );
   }
@@ -212,7 +271,7 @@ export default function RoomPage() {
       {/* HEADER */}
       <header className="sticky top-4 z-50 w-full max-w-4xl mx-auto px-4">
         <div className="flex justify-between items-center bg-ink-base/90 backdrop-blur-md p-2 pl-4 pr-2 rounded-full border-2 border-white/20 shadow-xl">
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-[3px]">
             <div className="bg-gradient-to-br from-ink-magenta to-ink-purple p-2.5 rounded-full shadow-inner border-2 border-white/10">
               <ChefHat className="w-6 h-6 text-white" />
             </div>
@@ -221,9 +280,9 @@ export default function RoomPage() {
               <div className="text-2xl font-black text-white font-mono tracking-tighter">{roomId}</div>
             </div>
           </div>
-          <div className="flex items-center gap-2 bg-ink-surface px-5 py-2.5 rounded-full border-2 border-ink-lime/30 shadow-inner">
+          <div className="flex items-center gap-[3px] bg-ink-surface px-5 py-2.5 rounded-full border-2 border-ink-lime/30 shadow-inner">
             <Users className="w-5 h-5 text-ink-lime" />
-            <span className="text-xl font-bold text-white tabular-nums">{room.players.length}</span>
+            <span className="text-2xl font-black text-white tabular-nums leading-none">{room.players.length}</span>
           </div>
         </div>
       </header>
@@ -250,27 +309,31 @@ export default function RoomPage() {
               <InkCard variant="glass" className="flex flex-col items-center justify-center gap-7 md:gap-8 py-9 md:py-12 border-4 border-white/10 bg-ink-base/40 backdrop-blur-md">
                 <div className="text-center space-y-2 md:space-y-3">
                   <h2 className="text-3xl md:text-4xl font-black text-white tracking-tight drop-shadow-md italic transform -rotate-1">WAITING...</h2>
-                  <div className="inline-block bg-ink-lime text-black px-4 py-1 rounded-sm text-xs md:text-sm font-black border-2 border-black transform rotate-1 shadow-sm">
+                  <div className="inline-block bg-black text-ink-lime px-4 py-1 rounded-sm text-xs md:text-sm font-black border-2 border-ink-lime transform rotate-1 shadow-sm mb-[10px]">
                     ホストの開始を待っています
                   </div>
                 </div>
 
-                <div className="bg-white p-4 pb-6 md:pb-8 pt-5 md:pt-6 rounded-sm shadow-xl transform rotate-1 border-4 border-gray-200 relative">
+                <div className="bg-white p-4 pb-6 md:pb-8 pt-5 md:pt-6 rounded-sm shadow-xl transform rotate-1 relative">
                   <div className="absolute -top-3 left-1/2 -translate-x-1/2 w-16 h-8 tape opacity-50" />
-                  {shareUrl && <QRCode value={shareUrl} size={140} />}
-                  <div className="absolute bottom-2 right-2 text-[10px] font-mono text-gray-400 font-bold">SCAN ME</div>
+                  {shareUrl && (
+                    <div className="flex justify-center">
+                      <QRCode value={shareUrl} size={140} />
+                    </div>
+                  )}
+                  <div className="absolute bottom-2 right-2 text-[10px] font-mono text-gray-400 font-bold"></div>
                 </div>
 
-                <div className="flex items-center gap-2 w-full max-w-xs relative">
-                  <div className="flex-1 px-3 md:px-4 py-2.5 md:py-3 bg-black/50 rounded-xl border border-white/10 text-[11px] md:text-xs font-mono text-ink-cyan truncate select-all shadow-inner">
+                <div className="flex items-center gap-2.5 w-full max-w-xs relative mt-5 md:mt-6">
+                  <div className="flex-1 px-3 md:px-4 py-2.5 md:py-3 bg-black/50 rounded-xl border border-white/10 text-xs md:text-sm font-mono text-ink-cyan truncate select-all shadow-inner">
                     {shareUrl}
                   </div>
                   <button 
                     onClick={handleCopyUrl}
-                    className="bg-ink-surface hover:bg-ink-surface/80 p-2.5 md:p-3 rounded-xl text-white transition-colors focus:ring-2 focus:ring-ink-cyan border-2 border-white/5 active:scale-95"
+                    className="bg-white text-ink-base hover:bg-gray-100 p-2.5 md:p-3 rounded-xl transition-colors focus:ring-2 focus:ring-ink-cyan border-4 border-black active:translate-y-[1px] shadow-[3px_3px_0_rgba(0,0,0,0.35)]"
                     aria-label="URLをコピー"
                   >
-                    {copied ? <Check className="w-5 h-5 text-ink-lime" /> : <Copy className="w-5 h-5" />}
+                    {copied ? <ClipboardCheckIcon className="w-5 h-5 text-ink-base" /> : <ClipboardIcon className="w-5 h-5 text-ink-base" />}
                   </button>
                 </div>
               </InkCard>
@@ -303,12 +366,12 @@ export default function RoomPage() {
           </div>
 
           {isHost && (
-            <div className="fixed bottom-6 left-4 right-4 md:static md:w-full md:max-w-md z-40">
+            <div className="sticky top-[88px] w-full md:max-w-md z-40 md:mt-6">
               <InkButton
                 onClick={handleStart}
                 variant="accent"
                 size="xl"
-                className="w-full shadow-[0_0_20px_rgba(204,255,0,0.5)] text-2xl font-black h-20 border-4 border-white/20 transform hover:scale-105 active:scale-95 transition-all"
+                className="w-full shadow-[0_0_26px_rgba(204,255,0,0.6)] text-[28px] font-black h-24 border-[5px] border-white/25 transform hover:scale-105 active:scale-95 transition-all"
               >
                 ゲームスタート！
               </InkButton>
