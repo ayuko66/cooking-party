@@ -129,8 +129,14 @@ export default function RoomPage() {
   // --- COMMONS ---
   const containerClass = "flex-1 flex flex-col items-center w-full max-w-2xl mx-auto gap-6 p-4 md:p-6";
   const labelClass = "block text-sm font-bold text-ink-cyan uppercase tracking-wider mb-1 px-2";
-  // Sticker style input: White background, black text, thick border
-  const inputClass = "w-full h-14 px-4 bg-white border-4 border-ink-base rounded-xl focus:border-ink-magenta focus:ring-4 focus:ring-ink-magenta/30 outline-none text-black font-black placeholder-gray-400 transition-all text-xl shadow-[4px_4px_0_rgba(0,0,0,0.2)] transform focus:-rotate-1";
+  // Neon outline input (align with TOP ROOM ID sizing)
+  const inputClass = cn(
+    "w-full rounded-2xl md:rounded-3xl transition-all font-mono font-black uppercase",
+    "h-[33.5px] md:h-[40px] px-4 md:px-5 text-base md:text-lg tracking-widest",
+    "backdrop-blur-sm border-2 md:border-3",
+    "bg-white/60 text-ink-base border-ink-cyan/70 focus:border-ink-cyan placeholder:text-ink-base/50",
+    "focus:outline-none focus:ring-2 focus:ring-ink-cyan/40 focus:ring-offset-2 focus:ring-offset-ink-base"
+  );
   const cardBaseClass = "bg-ink-surface border-2 border-white/10 rounded-2xl p-6 shadow-xl relative overflow-hidden";
 
   // --- JOIN SCREEN ---
@@ -182,7 +188,7 @@ export default function RoomPage() {
                 disabled={!nickname.trim()}
                 className="w-full h-16 text-2xl font-black shadow-lg transform active:scale-95 transition-transform"
               >
-                参加する！
+                {nickname.trim() ? '参加する！' : '名前を入力してね'}
               </InkButton>
             </form>
           </div>
@@ -353,7 +359,7 @@ export default function RoomPage() {
                   value={ingredient}
                   onChange={(e) => setIngredient(e.target.value)}
                   placeholder="例: ドラゴンフルーツ"
-                  className={`${inputClass} text-xl`}
+                  className={`${inputClass} text-xl h-[33.5px] md:h-[40px] px-4 md:px-5`}
                   maxLength={20}
                   autoFocus
                   autoComplete="off"

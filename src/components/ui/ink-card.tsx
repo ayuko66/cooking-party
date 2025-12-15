@@ -10,7 +10,7 @@ const InkCard = React.forwardRef<HTMLDivElement, InkCardProps>(
   ({ className, variant = 'glass', decoration = 'none', children, ...props }, ref) => {
     
     const variants = {
-      glass: 'bg-ink-surface/80 backdrop-blur-md border-2 border-white/10 shadow-xl',
+      glass: 'bg-ink-surface/80 backdrop-blur-md shadow-xl',
       solid: 'bg-ink-surface border-4 border-ink-base box-shadow-sticker',
       neon: 'bg-ink-base/90 border-2 border-ink-magenta/50 shadow-[0_0_15px_rgba(240,0,255,0.3)]',
     };
