@@ -127,7 +127,7 @@ export default function RoomPage() {
   };
 
   // --- COMMONS ---
-  const containerClass = "flex-1 flex flex-col items-center w-full max-w-2xl mx-auto gap-6 p-4 md:p-6";
+  const containerClass = "flex-1 flex flex-col items-center w-full max-w-3xl mx-auto gap-8 p-4 md:p-8";
   const labelClass = "block text-sm font-bold text-ink-cyan uppercase tracking-wider mb-1 px-2";
   // Neon outline input (align with TOP ROOM ID sizing)
   const inputClass = cn(
@@ -232,7 +232,7 @@ export default function RoomPage() {
       {room.phase === 'LOBBY' && (
         <main className={containerClass}>
           
-          <section className="w-full bg-ink-cyan/10 border-4 border-ink-cyan/30 p-6 rounded-3xl text-center backdrop-blur-sm relative overflow-hidden">
+          <section className="w-full bg-ink-cyan/10 border-4 border-ink-cyan/30 p-5 md:p-7 rounded-3xl text-center backdrop-blur-sm relative overflow-hidden space-y-3">
              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-ink-cyan to-transparent opacity-50" />
             <p className="text-lg md:text-xl font-bold text-white leading-relaxed relative z-10">
              みんなで、<span className="text-ink-cyan font-black text-2xl mx-1 inline-block transform -rotate-2">30秒以内</span>に材料を入力すると<br className="hidden md:block"/>
@@ -240,34 +240,34 @@ export default function RoomPage() {
             </p>
           </section>
 
-          <div className="grid md:grid-cols-2 gap-6 w-full pb-24 md:pb-0">
+          <div className="grid md:grid-cols-2 gap-5 md:gap-7 w-full pb-20 md:pb-4">
             {/* Waiting Status Card (Poster Style) */}
             <div className="relative group">
               {/* Tapes */}
               <div className="absolute -top-2 left-1/2 -translate-x-1/2 w-24 h-6 tape z-20" />
               <div className="absolute bottom-4 -right-2 w-16 h-6 tape rotate-45 z-20" />
 
-              <InkCard variant="glass" className="flex flex-col items-center justify-center gap-8 py-12 border-4 border-white/10 bg-ink-base/40 backdrop-blur-md">
-                <div className="text-center space-y-3">
-                  <h2 className="text-4xl font-black text-white tracking-tight drop-shadow-md italic transform -rotate-1">WAITING...</h2>
-                  <div className="inline-block bg-ink-lime text-black px-4 py-1.5 rounded-sm text-sm font-black border-2 border-black transform rotate-1 shadow-sm">
+              <InkCard variant="glass" className="flex flex-col items-center justify-center gap-7 md:gap-8 py-9 md:py-12 border-4 border-white/10 bg-ink-base/40 backdrop-blur-md">
+                <div className="text-center space-y-2 md:space-y-3">
+                  <h2 className="text-3xl md:text-4xl font-black text-white tracking-tight drop-shadow-md italic transform -rotate-1">WAITING...</h2>
+                  <div className="inline-block bg-ink-lime text-black px-4 py-1 rounded-sm text-xs md:text-sm font-black border-2 border-black transform rotate-1 shadow-sm">
                     ホストの開始を待っています
                   </div>
                 </div>
 
-                <div className="bg-white p-4 pb-8 pt-6 rounded-sm shadow-xl transform rotate-1 border-4 border-gray-200 relative">
+                <div className="bg-white p-4 pb-6 md:pb-8 pt-5 md:pt-6 rounded-sm shadow-xl transform rotate-1 border-4 border-gray-200 relative">
                   <div className="absolute -top-3 left-1/2 -translate-x-1/2 w-16 h-8 tape opacity-50" />
-                  {shareUrl && <QRCode value={shareUrl} size={160} />}
+                  {shareUrl && <QRCode value={shareUrl} size={140} />}
                   <div className="absolute bottom-2 right-2 text-[10px] font-mono text-gray-400 font-bold">SCAN ME</div>
                 </div>
 
                 <div className="flex items-center gap-2 w-full max-w-xs relative">
-                  <div className="flex-1 px-4 py-3 bg-black/50 rounded-xl border border-white/10 text-xs font-mono text-ink-cyan truncate select-all shadow-inner">
+                  <div className="flex-1 px-3 md:px-4 py-2.5 md:py-3 bg-black/50 rounded-xl border border-white/10 text-[11px] md:text-xs font-mono text-ink-cyan truncate select-all shadow-inner">
                     {shareUrl}
                   </div>
                   <button 
                     onClick={handleCopyUrl}
-                    className="bg-ink-surface hover:bg-ink-surface/80 p-3 rounded-xl text-white transition-colors focus:ring-2 focus:ring-ink-cyan border-2 border-white/5 active:scale-95"
+                    className="bg-ink-surface hover:bg-ink-surface/80 p-2.5 md:p-3 rounded-xl text-white transition-colors focus:ring-2 focus:ring-ink-cyan border-2 border-white/5 active:scale-95"
                     aria-label="URLをコピー"
                   >
                     {copied ? <Check className="w-5 h-5 text-ink-lime" /> : <Copy className="w-5 h-5" />}
@@ -278,15 +278,15 @@ export default function RoomPage() {
 
             {/* Players List */}
             <div className={cardBaseClass}>
-              <div className="flex items-center gap-3 mb-6 border-b-4 border-dashed border-white/10 pb-4">
+              <div className="flex items-center gap-3 mb-5 md:mb-6 border-b-4 border-dashed border-white/10 pb-3 md:pb-4">
                 <User className="w-6 h-6 text-ink-magenta" />
                 <h3 className="font-black text-white text-xl uppercase italic">Players</h3>
               </div>
-              <ul className="grid grid-cols-1 gap-3">
+              <ul className="grid grid-cols-1 gap-2.5 md:gap-3">
                 {room.players.map((p, i) => (
                   <li 
                     key={p.id} 
-                    className="flex items-center gap-4 bg-ink-base border-l-8 border-ink-surface p-3 rounded-r-xl shadow-sm hover:translate-x-1 transition-transform"
+                    className="flex items-center gap-3 md:gap-4 bg-ink-base border-l-8 border-ink-surface p-3 md:p-3.5 rounded-r-xl shadow-sm hover:translate-x-1 transition-transform"
                     style={{ borderLeftColor: i === 0 ? 'var(--color-ink-yellow)' : 'var(--color-ink-surface)' }}
                   >
                     <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center text-ink-base text-lg font-black border-2 border-black">
