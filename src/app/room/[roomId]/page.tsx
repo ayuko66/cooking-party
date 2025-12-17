@@ -132,7 +132,7 @@ export default function RoomPage() {
   // Neon outline input (align with TOP ROOM ID sizing)
   const inputClass = cn(
     "w-full rounded-2xl md:rounded-3xl transition-all font-mono font-black uppercase",
-    "h-[33.5px] md:h-[40px] px-4 md:px-5 text-base md:text-lg tracking-widest",
+    "h-[30px] px-4 md:px-5 text-sm md:text-base tracking-widest",
     "backdrop-blur-sm border-2 md:border-3",
     "bg-white/60 text-ink-base border-ink-cyan/70 focus:border-ink-cyan placeholder:text-ink-base/50",
     "focus:outline-none focus:ring-2 focus:ring-ink-cyan/40 focus:ring-offset-2 focus:ring-offset-ink-base"
@@ -225,7 +225,7 @@ export default function RoomPage() {
                     type="text"
                     value={nickname}
                     onChange={(e) => setNickname(e.target.value)}
-                    className={cn(inputClass, "h-14 md:h-16 text-xl bg-white/90 text-ink-base border-ink-cyan/80 shadow-inner")}
+                    className={cn(inputClass, "bg-white/90 text-ink-base border-ink-cyan/80 shadow-inner")}
                     placeholder="イカした名前"
                     maxLength={10}
                   />
@@ -422,7 +422,7 @@ export default function RoomPage() {
                   value={ingredient}
                   onChange={(e) => setIngredient(e.target.value)}
                   placeholder="例: ドラゴンフルーツ"
-                  className={`${inputClass} text-xl h-[33.5px] md:h-[40px] px-4 md:px-5`}
+                  className={inputClass}
                   maxLength={20}
                   autoFocus
                   autoComplete="off"
@@ -501,9 +501,9 @@ export default function RoomPage() {
         <main className={containerClass}>
            {/* Header Section */}
            <div className="text-center w-full mb-4">
-              <div className="inline-block bg-ink-lime text-black px-8 py-2 rounded-full text-xl font-black italic transform -rotate-1 border-4 border-black shadow-[4px_4px_0_black] mb-6">
-                DISH COMPLETE!
-              </div>
+             <div className="inline-block bg-ink-magenta text-white px-9 py-3 rounded-full text-2xl font-black italic transform -rotate-1 border-[5px] border-black shadow-[0_10px_0_rgba(0,0,0,0.45)] mb-6 tracking-widest drop-shadow-lg">
+               DISH COMPLETE!
+             </div>
               <h2 className="text-3xl md:text-4xl font-black text-white bg-ink-surface px-8 py-6 rounded-3xl border-4 border-white/5 shadow-xl leading-tight break-words relative overflow-hidden">
                 <div className="absolute -left-4 -top-4 w-12 h-12 bg-ink-magenta/20 rounded-full blur-xl" />
                 {room.result.dishName}
@@ -524,12 +524,6 @@ export default function RoomPage() {
                   />
                 </div>
              </InkCard>
-             <div className="absolute bottom-6 right-6 z-20">
-                <div className="bg-black/80 backdrop-blur-md px-4 py-1.5 rounded-sm border-l-4 border-ink-magenta flex items-center gap-2 shadow-lg transform -rotate-1">
-                  <Sparkles className="w-4 h-4 text-ink-magenta" />
-                  <span className="text-white text-xs font-bold tracking-wider">AI GENERATED</span>
-                </div>
-             </div>
            </div>
 
            {/* Description Section */}
@@ -547,11 +541,20 @@ export default function RoomPage() {
                USED INGREDIENTS
              </h3>
              <div className="flex flex-wrap gap-3">
-                {room.ingredients.map((ing) => (
-                  <span key={ing.id} className="bg-ink-base text-gray-200 border-2 border-ink-surface px-5 py-3 rounded-xl font-bold text-base shadow-sm">
-                    {ing.text}
-                  </span>
-                ))}
+                {room.ingredients.map((ing, i) => {
+                  const tilt = i % 3 === 0 ? '-rotate-1' : i % 3 === 1 ? 'rotate-1' : 'rotate-2';
+                  return (
+                    <div key={ing.id} className={`relative ${tilt}`}>
+                      <div className="absolute -top-1 left-4 w-10 h-2 bg-amber-200/80 rounded-sm shadow-[0_2px_4px_rgba(0,0,0,0.25)] rotate-2" />
+                      <div className="bg-white text-ink-base border-4 border-black px-5 py-3 rounded-xl font-black text-base shadow-[4px_4px_0_rgba(0,0,0,0.4)] min-w-[170px] flex items-center gap-3">
+                        <span className="inline-flex items-center justify-center w-8 h-8 bg-ink-cyan text-ink-base rounded-full border-2 border-black shadow-[2px_2px_0_rgba(0,0,0,0.35)] text-sm">
+                          {i + 1}
+                        </span>
+                        <span className="leading-tight text-ink-magenta font-black">{ing.text}</span>
+                      </div>
+                    </div>
+                  );
+                })}
              </div>
            </div>
 

@@ -72,7 +72,7 @@ export default function Home() {
                 value={roomId}
                 onChange={(e) => setRoomId(e.target.value)}
                 placeholder="ROOM ID"
-                className="flex-1 bg-ink-base text-white px-6 py-4 rounded-2xl border-4 border-ink-surface focus:border-ink-cyan focus:outline-none transition-all font-mono text-2xl uppercase placeholder-gray-700 font-bold"
+                className="flex-1 h-[30px] bg-ink-base text-white px-4 rounded-2xl border-4 border-ink-surface focus:border-ink-cyan focus:outline-none transition-all font-mono text-base uppercase placeholder-gray-700 font-bold"
                 maxLength={4}
               />
               <button

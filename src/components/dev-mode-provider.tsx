@@ -16,7 +16,8 @@ export function DevModeProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     // Check URL
     const devParam = searchParams.get('dev');
-    const isUrlDev = devParam?.toLowerCase() === 'true';
+    const decParam = searchParams.get('dec');
+    const isUrlDev = devParam?.toLowerCase() === 'true' || decParam?.toLowerCase() === 'true';
 
     // Check Storage
     // Check if window is defined (client-side)
@@ -35,8 +36,10 @@ export function DevModeProvider({ children }: { children: React.ReactNode }) {
   return (
     <DevModeContext.Provider value={isDev}>
       {isDev && (
-        <div className="fixed top-0 left-0 right-0 z-[100] bg-yellow-400 text-black text-center font-bold px-2 py-1 shadow-md uppercase tracking-wider text-xs pointer-events-none">
-          devモードで実行
+        <div className="fixed right-4 bottom-4 z-[100] pointer-events-none md:right-6 md:bottom-6">
+          <div className="bg-neutral-900 text-white font-black text-xs uppercase tracking-wider px-[3px] py-[3px] rounded-md shadow-lg border-2 border-white/30">
+            DEVモード中
+          </div>
         </div>
       )}
       {children}
