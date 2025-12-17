@@ -22,12 +22,10 @@ const ROOM_TTL_SECONDS =
 const isRedisConfigured = Boolean(process.env.REDIS_URL);
 const allowMemoryFallback = !isVercelRuntime;
 
-const preferredStore: StoreMode =
+const requiredStore: StoreMode = allowMemoryFallback ? 'memory' : 'redis';
+
+const activeStore: StoreMode =
   isRedisConfigured ? 'redis' : allowMemoryFallback ? 'memory' : 'none';
-
-const activeStore: StoreMode = preferredStore;
-
-const INSTANCE_ID = Math.random().toString(36).slice(2, 10);
 
 export const getStoreMode = (): StoreMode => activeStore;
 
@@ -35,10 +33,11 @@ export const getStoreDebug = () => ({
   isVercelRuntime,
   redisUrlPresent: Boolean(process.env.REDIS_URL),
   allowMemoryFallback,
-  preferredStore,
   activeStore,
   instanceId: INSTANCE_ID,
 });
+
+const INSTANCE_ID = Math.random().toString(36).slice(2, 10);
 
 export const normalizeRoomId = (roomId: string) => String(roomId ?? '').trim().toUpperCase();
 
