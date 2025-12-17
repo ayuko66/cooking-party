@@ -25,10 +25,15 @@ export default function RoomPage() {
   const [error, setError] = useState('');
   const [shareUrl, setShareUrl] = useState('');
   const [copied, setCopied] = useState(false);
-  const [notFoundCount, setNotFoundCount] = useState(0);
   const [isReconnecting, setIsReconnecting] = useState(false);
+  const [showRecoveryActions, setShowRecoveryActions] = useState(false);
   const [stateVersion, setStateVersion] = useState<number | null>(null);
   const versionRef = useRef<number | null>(null);
+  const roomRef = useRef<Room | null>(null);
+  const pollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const failureCountRef = useRef(0);
+  const notFoundCountRef = useRef(0);
+  const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const cookTriggeredRef = useRef(false);
 
   useEffect(() => {
@@ -36,10 +41,37 @@ export default function RoomPage() {
   }, [stateVersion]);
 
   useEffect(() => {
+    roomRef.current = room;
+  }, [room]);
+
+  useEffect(() => {
     if (typeof window !== 'undefined') {
       setShareUrl(window.location.href);
     }
   }, []);
+
+  useEffect(() => () => {
+    if (pollTimeoutRef.current) {
+      clearTimeout(pollTimeoutRef.current);
+    }
+    if (reconnectTimerRef.current) {
+      clearTimeout(reconnectTimerRef.current);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (isReconnecting) {
+      if (!reconnectTimerRef.current) {
+        reconnectTimerRef.current = setTimeout(() => setShowRecoveryActions(true), 12000);
+      }
+    } else {
+      if (reconnectTimerRef.current) {
+        clearTimeout(reconnectTimerRef.current);
+        reconnectTimerRef.current = null;
+      }
+      setShowRecoveryActions(false);
+    }
+  }, [isReconnecting]);
 
   const handleCopyUrl = () => {
     navigator.clipboard.writeText(shareUrl);
@@ -47,75 +79,93 @@ export default function RoomPage() {
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const getPollingInterval = useCallback(() => {
+    const current = roomRef.current;
+    if (!current || current.phase === 'LOBBY') return 2500;
+    if (current.phase === 'COUNTDOWN') return 800;
+    if (current.phase === 'COOKING') return 1500;
+    if (current.phase === 'RESULT') return null;
+    return 2500;
+  }, []);
+
   const fetchState = useCallback(async () => {
     if (!player) return;
 
-    try {
-      const params = new URLSearchParams({ roomId });
-      const since = versionRef.current;
-      if (since !== null) params.set('sinceVersion', String(since));
+    const params = new URLSearchParams({ roomId });
+    const since = versionRef.current;
+    if (since !== null) params.set('sinceVersion', String(since));
 
+    let nextDelay = getPollingInterval();
+    const backoff = () => {
+      failureCountRef.current += 1;
+      const attempt = Math.min(failureCountRef.current, 6);
+      return Math.min(15000, 800 * 2 ** (attempt - 1));
+    };
+
+    try {
       const res = await fetch(`/api/rooms/state?${params.toString()}`, { 
         cache: 'no-store',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { Accept: 'application/json' },
       });
 
       if (res.status === 204) {
-        setNotFoundCount(0);
+        failureCountRef.current = 0;
+        notFoundCountRef.current = 0;
         setIsReconnecting(false);
-        return;
-      }
-
-      if (res.status === 404) {
-        setNotFoundCount((prev) => {
-          const next = prev + 1;
-          if (next >= 3) {
-            setError('部屋が見つかりません');
-            setIsReconnecting(true);
-            router.push('/');
-          } else {
-            setIsReconnecting(true);
+        nextDelay = getPollingInterval();
+      } else if (res.status === 404 || res.status === 503) {
+        if (res.status === 404) {
+          notFoundCountRef.current += 1;
+          if (notFoundCountRef.current >= 3) {
+            setShowRecoveryActions(true);
           }
-          return next;
-        });
-        return;
-      }
-
-      if (!res.ok) {
+        } else {
+          notFoundCountRef.current = 0;
+        }
         setIsReconnecting(true);
-        return;
+        nextDelay = backoff();
+      } else if (!res.ok) {
+        setIsReconnecting(true);
+        notFoundCountRef.current = 0;
+        nextDelay = backoff();
+      } else {
+        const data = await res.json();
+        setRoom(data);
+        if (typeof data.version === 'number') {
+          setStateVersion(data.version);
+        }
+        failureCountRef.current = 0;
+        notFoundCountRef.current = 0;
+        setIsReconnecting(false);
+        nextDelay = getPollingInterval();
       }
-
-      const data = await res.json();
-      setRoom(data);
-      if (typeof data.version === 'number') {
-        setStateVersion(data.version);
-      }
-      setNotFoundCount(0);
-      setIsReconnecting(false);
     } catch (e) {
       console.error(e);
       setIsReconnecting(true);
+      notFoundCountRef.current = 0;
+      nextDelay = backoff();
+    } finally {
+      if (pollTimeoutRef.current) {
+        clearTimeout(pollTimeoutRef.current);
+      }
+      if (nextDelay !== null) {
+        pollTimeoutRef.current = setTimeout(() => {
+          fetchState();
+        }, nextDelay);
+      }
     }
-  }, [player, roomId, router]);
+  }, [getPollingInterval, player, roomId]);
 
   useEffect(() => {
     if (!player) return;
-
-    const pollingInterval = (() => {
-      if (!room || room.phase === 'LOBBY') return 2500;
-      if (room.phase === 'COUNTDOWN') return 800;
-      if (room.phase === 'COOKING') return 1500;
-      if (room.phase === 'RESULT') return null;
-      return 2500;
-    })();
-
     fetchState();
-    if (!pollingInterval) return;
-
-    const interval = setInterval(fetchState, pollingInterval);
-    return () => clearInterval(interval);
-  }, [player, room?.phase, fetchState]);
+    return () => {
+      if (pollTimeoutRef.current) {
+        clearTimeout(pollTimeoutRef.current);
+        pollTimeoutRef.current = null;
+      }
+    };
+  }, [player, fetchState]);
 
   useEffect(() => {
     if (room?.phase === 'COUNTDOWN' && room.countdownEndTime) {
@@ -133,14 +183,24 @@ export default function RoomPage() {
     if (timeLeft === 0 && room?.phase === 'COUNTDOWN' && room.players[0].id === player?.id) {
        if (cookTriggeredRef.current) return;
        cookTriggeredRef.current = true;
-       fetch('/api/rooms/cook', {
-         method: 'POST',
-         headers: {
-           'Content-Type': 'application/json',
-         },
-         body: JSON.stringify({ roomId, isDev }),
-         cache: 'no-store',
-       });
+       (async () => {
+         try {
+           const res = await fetch('/api/rooms/cook', {
+             method: 'POST',
+             headers: {
+               'Content-Type': 'application/json',
+             },
+             body: JSON.stringify({ roomId, isDev }),
+             cache: 'no-store',
+           });
+           if (!res.ok) {
+             setIsReconnecting(true);
+           }
+         } catch (err) {
+           console.error(err);
+           setIsReconnecting(true);
+         }
+       })();
     }
   }, [timeLeft, room?.phase, room?.players, player?.id, roomId, isDev]);
 
@@ -176,31 +236,46 @@ export default function RoomPage() {
   };
 
   const handleStart = async () => {
-    await fetch('/api/rooms/start', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ roomId }),
-      cache: 'no-store',
-    });
+    try {
+      const res = await fetch('/api/rooms/start', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ roomId }),
+        cache: 'no-store',
+      });
+      if (!res.ok) {
+        setIsReconnecting(true);
+      }
+    } catch (err) {
+      console.error(err);
+      setIsReconnecting(true);
+    }
   };
 
   const handleSubmitIngredient = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!ingredient.trim() || !player) return;
 
-    const res = await fetch('/api/rooms/submit', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ roomId, playerId: player.id, text: ingredient }),
-      cache: 'no-store',
-    });
+    try {
+      const res = await fetch('/api/rooms/submit', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ roomId, playerId: player.id, text: ingredient }),
+        cache: 'no-store',
+      });
 
-    if (res.ok) {
-      setIngredient('');
+      if (res.ok) {
+        setIngredient('');
+      } else {
+        setIsReconnecting(true);
+      }
+    } catch (err) {
+      console.error(err);
+      setIsReconnecting(true);
     }
   };
 
@@ -216,17 +291,42 @@ export default function RoomPage() {
     "focus:outline-none focus:ring-2 focus:ring-ink-cyan/40 focus:ring-offset-2 focus:ring-offset-ink-base"
   );
   const cardBaseClass = "bg-ink-surface border-2 border-white/10 rounded-2xl p-6 shadow-xl relative overflow-hidden";
+  const renderReconnectBanner = (className = "") => (
+    <div className={cn("w-full max-w-5xl mx-auto text-center", className)}>
+      <div className="inline-flex flex-col items-center gap-2">
+        <span className="inline-block bg-amber-300 text-black font-black text-xs px-3 py-2 rounded-full shadow-md border border-black/10">
+          再接続中…
+        </span>
+        {showRecoveryActions && (
+          <div className="flex gap-2 justify-center">
+            <InkButton
+              size="sm"
+              variant="secondary"
+              onClick={() => window.location.reload()}
+              className="font-black"
+            >
+              再読み込み
+            </InkButton>
+            <InkButton
+              size="sm"
+              variant="primary"
+              onClick={() => router.push('/')}
+              className="font-black"
+            >
+              ホームへ戻る
+            </InkButton>
+          </div>
+        )}
+      </div>
+    </div>
+  );
 
   // --- JOIN SCREEN ---
   if (!player) {
     return (
       <InkLayout className="items-center justify-center p-4">
         {isReconnecting && (
-          <div className="w-full max-w-5xl mx-auto mb-3 text-center">
-            <span className="inline-block bg-amber-300 text-black font-black text-xs px-3 py-2 rounded-full shadow-md border border-black/10">
-              再接続中…
-            </span>
-          </div>
+          renderReconnectBanner("mb-3")
         )}
         <div className="w-full max-w-5xl grid items-stretch gap-6 md:gap-8 md:grid-cols-[1.05fr,0.95fr]">
 
@@ -345,9 +445,7 @@ export default function RoomPage() {
     <InkLayout className="items-center justify-center">
       {isReconnecting && (
         <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20">
-          <span className="inline-block bg-amber-300 text-black font-black text-xs px-3 py-2 rounded-full shadow-md border border-black/10">
-            再接続中…
-          </span>
+          {renderReconnectBanner()}
         </div>
       )}
       <div className="text-4xl font-black text-white animate-bounce drop-shadow-lg" role="status">
@@ -361,10 +459,8 @@ export default function RoomPage() {
   return (
     <InkLayout>
       {isReconnecting && (
-        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50">
-          <span className="inline-block bg-amber-300 text-black font-black text-xs px-3 py-2 rounded-full shadow-md border border-black/10">
-            再接続中…
-          </span>
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 px-4">
+          {renderReconnectBanner()}
         </div>
       )}
       {/* HEADER */}

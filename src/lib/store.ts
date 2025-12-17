@@ -1,4 +1,11 @@
 
+export class KvUnavailableError extends Error {
+  constructor(message?: string) {
+    super(message ?? 'KV unavailable');
+    this.name = 'KvUnavailableError';
+  }
+}
+
 // KV client is loaded lazily to avoid hard dependency during local/dev when env vars are missing
 let kvClient: any = null;
 const getKvClient = async () => {
@@ -8,8 +15,8 @@ const getKvClient = async () => {
     kvClient = mod.kv;
     return kvClient;
   } catch (err) {
-    console.warn('KV client unavailable, falling back to in-memory store.', err);
-    return null;
+    console.warn('KV client unavailable.', err);
+    throw new KvUnavailableError('Failed to load KV client');
   }
 };
 
@@ -74,15 +81,25 @@ const memoryStore = (() => {
 const adapter: StoreAdapter = isKvEnvConfigured
   ? {
       get: async <T>(key: string) => {
-        const kv = await getKvClient();
-        if (!kv) return memoryStore.get<T>(key);
-        const value = await kv.get(key);
-        return (value as T) ?? null;
+        try {
+          const kv = await getKvClient();
+          const value = await kv.get(key);
+          return (value as T) ?? null;
+        } catch (err) {
+          if (err instanceof KvUnavailableError) throw err;
+          console.error('KV get error', err);
+          throw new KvUnavailableError('KV get failed');
+        }
       },
       set: async (key: string, value: any, opts?: { ex?: number }) => {
-        const kv = await getKvClient();
-        if (!kv) return memoryStore.set(key, value, opts);
-        await kv.set(key, value, { ex: opts?.ex });
+        try {
+          const kv = await getKvClient();
+          await kv.set(key, value, { ex: opts?.ex });
+        } catch (err) {
+          if (err instanceof KvUnavailableError) throw err;
+          console.error('KV set error', err);
+          throw new KvUnavailableError('KV set failed');
+        }
       },
     }
   : memoryStore;
