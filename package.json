@@ -10,11 +10,11 @@
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
+    "@vercel/kv": "^2.0.0",
     "clsx": "^2.1.1",
     "groq-sdk": "^0.37.0",
     "lucide-react": "^0.555.0",
     "next": "^16.0.7",
-    "@vercel/kv": "^2.0.0",
     "react": "19.2.0",
     "react-dom": "19.2.0",
     "react-qr-code": "^2.0.18",
@@ -28,6 +28,6 @@
     "eslint": "^9",
     "eslint-config-next": "16.0.5",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "5.9.3"
   }
 }

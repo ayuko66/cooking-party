@@ -1,5 +1,17 @@
 
-import { kv } from '@vercel/kv';
+// KV client is loaded lazily to avoid hard dependency during local/dev when env vars are missing
+let kvClient: any = null;
+const getKvClient = async () => {
+  if (kvClient) return kvClient;
+  try {
+    const mod = await import('@vercel/kv');
+    kvClient = mod.kv;
+    return kvClient;
+  } catch (err) {
+    console.warn('KV client unavailable, falling back to in-memory store.', err);
+    return null;
+  }
+};
 
 export type GamePhase = 'LOBBY' | 'COUNTDOWN' | 'COOKING' | 'RESULT';
 
@@ -33,11 +45,52 @@ export interface Room {
 }
 
 const ROOM_TTL_SECONDS = parseInt(process.env.ROOM_TTL_SECONDS ?? '21600', 10); // default 6h
+const isKvEnvConfigured = Boolean(process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN);
+
+type StoreAdapter = {
+  get: <T>(key: string) => Promise<T | null>;
+  set: (key: string, value: any, opts?: { ex?: number }) => Promise<void>;
+};
+
+const memoryStore = (() => {
+  const map = new Map<string, { value: any; expiresAt: number | null }>();
+  return {
+    get: async <T>(key: string): Promise<T | null> => {
+      const entry = map.get(key);
+      if (!entry) return null;
+      if (entry.expiresAt && entry.expiresAt < Date.now()) {
+        map.delete(key);
+        return null;
+      }
+      return entry.value as T;
+    },
+    set: async (key: string, value: any, opts?: { ex?: number }) => {
+      const expiresAt = opts?.ex ? Date.now() + opts.ex * 1000 : null;
+      map.set(key, { value, expiresAt });
+    },
+  };
+})();
+
+const adapter: StoreAdapter = isKvEnvConfigured
+  ? {
+      get: async <T>(key: string) => {
+        const kv = await getKvClient();
+        if (!kv) return memoryStore.get<T>(key);
+        const value = await kv.get(key);
+        return (value as T) ?? null;
+      },
+      set: async (key: string, value: any, opts?: { ex?: number }) => {
+        const kv = await getKvClient();
+        if (!kv) return memoryStore.set(key, value, opts);
+        await kv.set(key, value, { ex: opts?.ex });
+      },
+    }
+  : memoryStore;
 
 const roomKey = (roomId: string) => `room:${roomId}`;
 
 async function saveRoom(room: Room) {
-  await kv.set(roomKey(room.id), room, { ex: ROOM_TTL_SECONDS });
+  await adapter.set(roomKey(room.id), room, { ex: ROOM_TTL_SECONDS });
   return room;
 }
 
@@ -58,7 +111,7 @@ export async function createRoom(): Promise<string> {
 }
 
 export async function getRoom(roomId: string): Promise<Room | null> {
-  const room = await kv.get<Room>(roomKey(roomId));
+  const room = await adapter.get<Room>(roomKey(roomId));
   return room ?? null;
 }
 
