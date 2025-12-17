@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { KvUnavailableError, getRoom, joinRoom, getStoreDebug } from '@/lib/store';
+import { KvUnavailableError, getRoom, joinRoom, getStoreDebug, normalizeRoomId } from '@/lib/store';
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -20,12 +20,12 @@ export async function POST(request: Request) {
   let roomIdForLog: string | null = null;
   try {
     const { roomId, nickname } = await request.json();
-    const normalizedRoomId = String(roomId ?? '').trim().toUpperCase();
+    const normalizedRoomId = normalizeRoomId(roomId ?? '');
     const debug = getStoreDebug();
     roomIdForLog = normalizedRoomId || null;
 
     if (!normalizedRoomId || !nickname) {
-      return NextResponse.json({ error: 'Missing roomId or nickname' }, { status: 400 });
+      return NextResponse.json({ error: 'Missing roomId or nickname' }, { status: 400, headers: { 'Cache-Control': 'no-store' } });
     }
 
     const room = await getRoomRetry(normalizedRoomId);
@@ -63,7 +63,7 @@ export async function POST(request: Request) {
         ...debug,
         vercelRequestId: request.headers.get('x-vercel-id'),
       });
-      return NextResponse.json({ error: '次のゲームまで待っててね' }, { status: 400 });
+      return NextResponse.json({ error: '次のゲームまで待っててね' }, { status: 400, headers: { 'Cache-Control': 'no-store' } });
     }
     console.log('[room-join]', { action: 'join-ok', roomId: normalizedRoomId, version: room.version, phase: room.phase, ...debug, vercelRequestId: request.headers.get('x-vercel-id') });
     return NextResponse.json({ player });

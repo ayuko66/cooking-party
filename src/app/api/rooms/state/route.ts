@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { KvUnavailableError, getRoomWithVersion, getStoreMode, getStoreDebug } from '@/lib/store';
+import { KvUnavailableError, getRoomWithVersion, getStoreDebug, normalizeRoomId } from '@/lib/store';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -9,11 +9,11 @@ export async function GET(request: Request) {
   const roomIdParam = searchParams.get('roomId');
   const sinceVersionParam = searchParams.get('sinceVersion');
   const sinceVersion = sinceVersionParam ? parseInt(sinceVersionParam, 10) : undefined;
-  const roomId = String(roomIdParam ?? '').trim().toUpperCase();
+  const roomId = normalizeRoomId(roomIdParam ?? '');
   const debug = getStoreDebug();
 
   if (!roomId) {
-    return NextResponse.json({ error: 'Missing roomId' }, { status: 400 });
+    return NextResponse.json({ error: 'Missing roomId' }, { status: 400, headers: { 'Cache-Control': 'no-store' } });
   }
 
   try {

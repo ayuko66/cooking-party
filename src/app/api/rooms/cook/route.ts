@@ -1,7 +1,7 @@
 
 import { NextResponse } from 'next/server';
 import { generateDish, generateImage } from '@/lib/ai';
-import { CookingResult, KvUnavailableError, getRoom, setCookingPhase, setResult, getStoreMode, getStoreDebug } from '@/lib/store';
+import { CookingResult, KvUnavailableError, getRoom, setCookingPhase, setResult, getStoreDebug, normalizeRoomId } from '@/lib/store';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -17,11 +17,11 @@ export async function POST(request: Request) {
   try {
     const body = await request.json().catch(() => ({}));
     const { roomId, isDev } = body as { roomId?: string; isDev?: boolean };
-    const normalizedRoomId = String(roomId ?? '').trim().toUpperCase();
+    const normalizedRoomId = normalizeRoomId(roomId ?? '');
     roomIdForLog = normalizedRoomId || null;
 
     if (!normalizedRoomId) {
-      return NextResponse.json({ error: 'Missing roomId' }, { status: 400 });
+      return NextResponse.json({ error: 'Missing roomId' }, { status: 400, headers: { 'Cache-Control': 'no-store' } });
     }
 
     const room = await getRoom(normalizedRoomId);

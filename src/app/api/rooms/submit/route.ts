@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { KvUnavailableError, addIngredient, getRoom, getStoreDebug } from '@/lib/store';
+import { KvUnavailableError, addIngredient, getRoom, getStoreDebug, normalizeRoomId } from '@/lib/store';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -8,11 +8,11 @@ export async function POST(request: Request) {
   let roomIdForLog: string | null = null;
   try {
     const { roomId, playerId, text } = await request.json();
-    const normalizedRoomId = String(roomId ?? '').trim().toUpperCase();
+    const normalizedRoomId = normalizeRoomId(roomId ?? '');
     roomIdForLog = normalizedRoomId || null;
 
     if (!normalizedRoomId || !playerId || !text) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+      return NextResponse.json({ error: 'Missing required fields' }, { status: 400, headers: { 'Cache-Control': 'no-store' } });
     }
 
     const roomBefore = await getRoom(normalizedRoomId);

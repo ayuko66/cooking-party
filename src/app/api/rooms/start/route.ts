@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { KvUnavailableError, startGame, getRoom, getStoreDebug } from '@/lib/store';
+import { KvUnavailableError, startGame, getRoom, getStoreDebug, normalizeRoomId } from '@/lib/store';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -8,12 +8,12 @@ export async function POST(request: Request) {
   let roomIdForLog: string | null = null;
   try {
     const { roomId } = await request.json();
-    const normalizedRoomId = String(roomId ?? '').trim().toUpperCase();
+    const normalizedRoomId = normalizeRoomId(roomId ?? '');
     const debug = getStoreDebug();
     roomIdForLog = normalizedRoomId || null;
 
     if (!normalizedRoomId) {
-      return NextResponse.json({ error: 'Missing roomId' }, { status: 400 });
+      return NextResponse.json({ error: 'Missing roomId' }, { status: 400, headers: { 'Cache-Control': 'no-store' } });
     }
 
     const before = await getRoom(normalizedRoomId);
