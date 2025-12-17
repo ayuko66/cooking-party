@@ -3,6 +3,7 @@ import { StoreUnavailableError, getRoom, joinRoom, getStoreDebug, normalizeRoomI
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
+
 const getRoomRetry = async (roomId: string) => {
   const delays = [0, 80, 200];
   for (let i = 0; i < delays.length; i += 1) {
@@ -21,17 +22,28 @@ export async function POST(request: Request) {
 
   try {
     const { roomId, nickname } = await request.json();
+
+    const rawRoomId = roomId;
     const normalizedRoomId = normalizeRoomId(roomId ?? '');
     const debug = getStoreDebug();
+
+    console.log('[room-join]', {
+      action: 'join-request',
+      rawRoomId,
+      normalizedRoomId,
+      nickname,
+      ...debug,
+      vercelRequestId: request.headers.get('x-vercel-id'),
+    });
     roomIdForLog = normalizedRoomId || null;
 
-    if (!normalizedRoomId || !nickname) {
+    if (!normalizedRoomId || !/^[A-Z0-9]{4}$/.test(normalizedRoomId) || !nickname) {
       return NextResponse.json(
-        { error: 'Missing roomId or nickname' },
+        { error: 'Invalid roomId or nickname' },
         { status: 400, headers: { 'Cache-Control': 'no-store' } }
       );
     }
-
+    
     const room = await getRoomRetry(normalizedRoomId);
 
     if (!room) {
