@@ -51,8 +51,19 @@ export interface Room {
   version: number;
 }
 
-const ROOM_TTL_SECONDS = parseInt(process.env.ROOM_TTL_SECONDS ?? '21600', 10); // default 6h
+const DEFAULT_ROOM_TTL_SECONDS = 21600;
+const parsedTtl = parseInt(process.env.ROOM_TTL_SECONDS ?? `${DEFAULT_ROOM_TTL_SECONDS}`, 10);
+const ROOM_TTL_SECONDS =
+  Number.isFinite(parsedTtl) && parsedTtl > 60 ? parsedTtl : DEFAULT_ROOM_TTL_SECONDS; // guard against accidental tiny TTL
 const isKvEnvConfigured = Boolean(process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN);
+
+export const getStoreMode = (): 'kv' | 'memory' => (isKvEnvConfigured ? 'kv' : 'memory');
+export const getStoreDebug = () => ({
+  isKvEnvConfigured,
+  kvUrlPresent: Boolean(process.env.KV_REST_API_URL),
+  kvTokenPresent: Boolean(process.env.KV_REST_API_TOKEN),
+  storeMode: getStoreMode(),
+});
 
 type StoreAdapter = {
   get: <T>(key: string) => Promise<T | null>;

@@ -1,7 +1,7 @@
 
 import { NextResponse } from 'next/server';
 import { generateDish, generateImage } from '@/lib/ai';
-import { CookingResult, KvUnavailableError, getRoom, setCookingPhase, setResult } from '@/lib/store';
+import { CookingResult, KvUnavailableError, getRoom, setCookingPhase, setResult, getStoreMode, getStoreDebug } from '@/lib/store';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -17,27 +17,29 @@ export async function POST(request: Request) {
   try {
     const body = await request.json().catch(() => ({}));
     const { roomId, isDev } = body as { roomId?: string; isDev?: boolean };
-    roomIdForLog = roomId ?? null;
+    const normalizedRoomId = String(roomId ?? '').trim().toUpperCase();
+    roomIdForLog = normalizedRoomId || null;
 
-    if (!roomId) {
+    if (!normalizedRoomId) {
       return NextResponse.json({ error: 'Missing roomId' }, { status: 400 });
     }
 
-    const room = await getRoom(roomId);
+    const room = await getRoom(normalizedRoomId);
     if (!room) {
-      return NextResponse.json({ error: 'Room not found' }, { status: 404 });
+      console.log('[room-cook]', { action: 'missing', roomId: normalizedRoomId, version: null, phase: null, ...getStoreDebug(), vercelRequestId: request.headers.get('x-vercel-id') });
+      return NextResponse.json({ error: 'Room not found' }, { status: 404, headers: { 'Cache-Control': 'no-store' } });
     }
 
     if (room.phase !== 'COUNTDOWN') {
-      console.log('[room-cook]', { action: 'noop', roomId, version: room.version ?? null, phase: room.phase, vercelRequestId: request.headers.get('x-vercel-id') });
+      console.log('[room-cook]', { action: 'noop', roomId: normalizedRoomId, version: room.version ?? null, phase: room.phase, ...getStoreDebug(), vercelRequestId: request.headers.get('x-vercel-id') });
       return NextResponse.json({ success: true });
     }
 
-    await setCookingPhase(roomId);
+    await setCookingPhase(normalizedRoomId);
 
-    const cookingRoom = await getRoom(roomId);
+    const cookingRoom = await getRoom(normalizedRoomId);
     if (!cookingRoom) {
-      console.warn('[room-cook]', { action: 'missing-after-cook', roomId, vercelRequestId: request.headers.get('x-vercel-id') });
+      console.warn('[room-cook]', { action: 'missing-after-cook', roomId: normalizedRoomId, ...getStoreDebug(), vercelRequestId: request.headers.get('x-vercel-id') });
       return NextResponse.json({ success: true });
     }
 
@@ -62,20 +64,20 @@ export async function POST(request: Request) {
       result = fallbackResult;
     }
 
-    const latestRoom = await getRoom(roomId);
+    const latestRoom = await getRoom(normalizedRoomId);
     if (!latestRoom) {
-      console.warn('[room-cook]', { action: 'missing-before-save', roomId, vercelRequestId: request.headers.get('x-vercel-id') });
+      console.warn('[room-cook]', { action: 'missing-before-save', roomId: normalizedRoomId, ...getStoreDebug(), vercelRequestId: request.headers.get('x-vercel-id') });
       return NextResponse.json({ success: true });
     }
 
-    await setResult(roomId, result);
-    const after = await getRoom(roomId);
-    console.log('[room-cook]', { action: 'cook', roomId, version: after?.version ?? latestRoom.version ?? null, phase: after?.phase ?? latestRoom.phase ?? null, vercelRequestId: request.headers.get('x-vercel-id') });
+    await setResult(normalizedRoomId, result);
+    const after = await getRoom(normalizedRoomId);
+    console.log('[room-cook]', { action: 'cook', roomId: normalizedRoomId, version: after?.version ?? latestRoom.version ?? null, phase: after?.phase ?? latestRoom.phase ?? null, ...getStoreDebug(), vercelRequestId: request.headers.get('x-vercel-id') });
 
     return NextResponse.json({ success: true, result });
   } catch (error) {
     if (error instanceof KvUnavailableError) {
-      console.error('[room-cook]', { status: 'kv_unavailable', roomId: roomIdForLog, vercelRequestId: request.headers.get('x-vercel-id') });
+      console.error('[room-cook]', { status: 'kv_unavailable', roomId: roomIdForLog, ...getStoreDebug(), vercelRequestId: request.headers.get('x-vercel-id') });
       return NextResponse.json({ error: 'KV unavailable' }, { status: 503, headers: { 'Cache-Control': 'no-store' } });
     }
     throw error;
