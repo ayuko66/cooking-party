@@ -54,7 +54,10 @@ export default function RoomPage() {
       const since = versionRef.current;
       if (since !== null) params.set('sinceVersion', String(since));
 
-      const res = await fetch(`/api/rooms/state?${params.toString()}`, { cache: 'no-store' });
+      const res = await fetch(`/api/rooms/state?${params.toString()}`, { 
+        cache: 'no-store',
+        headers: { 'Content-Type': 'application/json' },
+      });
 
       if (res.status === 204) {
         setNotFoundCount(0);
@@ -67,9 +70,10 @@ export default function RoomPage() {
           const next = prev + 1;
           if (next >= 3) {
             setError('部屋が見つかりません');
+            setIsReconnecting(true);
             router.push('/');
           } else {
-            setIsReconnecting(true);
+            setIsReconnecting(false);
           }
           return next;
         });
@@ -77,7 +81,7 @@ export default function RoomPage() {
       }
 
       if (!res.ok) {
-        setIsReconnecting(true);
+        setIsReconnecting(false);
         return;
       }
 
@@ -90,7 +94,7 @@ export default function RoomPage() {
       setIsReconnecting(false);
     } catch (e) {
       console.error(e);
-      setIsReconnecting(true);
+      setIsReconnecting(false);
     }
   }, [player, roomId, router]);
 

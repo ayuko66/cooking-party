@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server';
 import { getRoomWithVersion } from '@/lib/store';
 
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const roomId = searchParams.get('roomId');
@@ -14,12 +17,15 @@ export async function GET(request: Request) {
   const result = await getRoomWithVersion(roomId, sinceVersion);
 
   if (result.status === 'missing') {
+    console.log('[room-state]', { action: 'state', roomId, version: null, phase: null, vercelRequestId: request.headers.get('x-vercel-id') });
     return NextResponse.json({ error: 'Room not found' }, { status: 404 });
   }
 
   if (result.status === 'unchanged') {
+    console.log('[room-state]', { action: 'state', roomId, version: sinceVersion, phase: null, vercelRequestId: request.headers.get('x-vercel-id') });
     return new Response(null, { status: 204 });
   }
 
+  console.log('[room-state]', { action: 'state', roomId, version: result.room.version, phase: result.room.phase, vercelRequestId: request.headers.get('x-vercel-id') });
   return NextResponse.json(result.room, { status: 200 });
 }
