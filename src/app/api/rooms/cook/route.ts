@@ -1,12 +1,20 @@
+
 import { NextResponse } from 'next/server';
-import { getRoom, setCookingPhase, setResult } from '@/lib/store';
 import { generateDish, generateImage } from '@/lib/ai';
+import { CookingResult, getRoom, setCookingPhase, setResult } from '@/lib/store';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
+const fallbackResult: CookingResult = {
+  dishName: 'AIシェフの謎鍋',
+  description: '材料をこぼしてしまいましたが、とりあえず食べられそうな鍋ができました。',
+  imageUrl: 'https://placehold.co/600x400?text=Cooking+Party',
+};
+
 export async function POST(request: Request) {
-  const { roomId, isDev } = await request.json();
+  const body = await request.json().catch(() => ({}));
+  const { roomId, isDev } = body as { roomId?: string; isDev?: boolean };
 
   if (!roomId) {
     return NextResponse.json({ error: 'Missing roomId' }, { status: 400 });
@@ -14,65 +22,52 @@ export async function POST(request: Request) {
 
   const room = await getRoom(roomId);
   if (!room) {
-    console.log('[room-cook]', { action: 'cook-missing', roomId, version: null, phase: null, vercelRequestId: request.headers.get('x-vercel-id') });
     return NextResponse.json({ error: 'Room not found' }, { status: 404 });
   }
 
-  // 即座にCOOKINGフェーズへ移行
+  if (room.phase !== 'COUNTDOWN') {
+    console.log('[room-cook]', { action: 'noop', roomId, version: room.version ?? null, phase: room.phase, vercelRequestId: request.headers.get('x-vercel-id') });
+    return NextResponse.json({ success: true });
+  }
+
   await setCookingPhase(roomId);
-  console.log('[room-cook]', { action: 'cook-begin', roomId, version: room.version + 1, phase: 'COOKING', vercelRequestId: request.headers.get('x-vercel-id') });
 
-  // AI生成を非同期で実行（レスポンスを待たない）
-  // 実際のサーバーレス環境ではプロセスがキルされる可能性があるが、MVP/Docker環境では問題ない
-  (async () => {
-    try {
-      if (isDev) {
-        // Devモード: 固定レスポンス
-        await setResult(roomId, {
-          dishName: 'DEV MODE カレー',
-          description: 'これは開発モード用の固定レスポンスです。APIは使用されていません。',
-          imageUrl: 'https://placehold.co/600x400?text=DEV+MODE',
-        });
-        console.log('[room-cook]', { action: 'cook-dev', roomId, version: (room.version ?? 0) + 2, phase: 'RESULT', vercelRequestId: request.headers.get('x-vercel-id') });
-        return;
-      }
+  const cookingRoom = await getRoom(roomId);
+  if (!cookingRoom) {
+    console.warn('[room-cook]', { action: 'missing-after-cook', roomId, vercelRequestId: request.headers.get('x-vercel-id') });
+    return NextResponse.json({ success: true });
+  }
 
-      const ingredients = room.ingredients.map(i => i.text);
-      
-      let dishName, description, imageUrl;
+  const ingredientTexts = cookingRoom.ingredients.map((ing) => ing.text);
 
-      if (ingredients.length === 0) {
-        dishName = 'おいしい空気';
-        description = '素材の味を極限まで活かしました。カロリーゼロでヘルシーです。';
-        imageUrl = await generateImage(
-          'Delicious Air',
-          'Empty plate on a table, minimal, artistic, white background',
-          []
-        );
-      } else {
-        const dish = await generateDish(ingredients);
-        dishName = dish.name;
-        description = dish.description;
-        imageUrl = await generateImage(dish.name, dish.description, ingredients);
-      }
+  let result: CookingResult = fallbackResult;
 
-      await setResult(roomId, {
-        dishName,
-        description,
-        imageUrl,
-      });
-      console.log('[room-cook]', { action: 'cook-result', roomId, version: (room.version ?? 0) + 2, phase: 'RESULT', vercelRequestId: request.headers.get('x-vercel-id') });
-    } catch (error) {
-      console.error('Cooking failed:', error);
-      // エラー状態またはフォールバック結果を設定
-      await setResult(roomId, {
-        dishName: '失敗した料理',
-        description: '調理中に爆発しました。',
-        imageUrl: 'https://placehold.co/600x400?text=Cooking+Failed',
-      });
-      console.log('[room-cook]', { action: 'cook-error', roomId, version: (room.version ?? 0) + 2, phase: 'RESULT', vercelRequestId: request.headers.get('x-vercel-id') });
+  try {
+    if (isDev) {
+      result = {
+        dishName: 'デバッグカレーDX',
+        description: 'devモード用の固定レスポンスです。AIを呼ばずに完了しました。',
+        imageUrl: 'https://placehold.co/600x400?text=DEV+COOK',
+      };
+    } else {
+      const dish = await generateDish(ingredientTexts);
+      const imageUrl = await generateImage(dish.name, dish.description, ingredientTexts);
+      result = { dishName: dish.name, description: dish.description, imageUrl };
     }
-  })();
+  } catch (error) {
+    console.error('[room-cook] generation failed', { roomId, error });
+    result = fallbackResult;
+  }
 
-  return NextResponse.json({ success: true });
+  const latestRoom = await getRoom(roomId);
+  if (!latestRoom) {
+    console.warn('[room-cook]', { action: 'missing-before-save', roomId, vercelRequestId: request.headers.get('x-vercel-id') });
+    return NextResponse.json({ success: true });
+  }
+
+  await setResult(roomId, result);
+  const after = await getRoom(roomId);
+  console.log('[room-cook]', { action: 'cook', roomId, version: after?.version ?? latestRoom.version ?? null, phase: after?.phase ?? latestRoom.phase ?? null, vercelRequestId: request.headers.get('x-vercel-id') });
+
+  return NextResponse.json({ success: true, result });
 }

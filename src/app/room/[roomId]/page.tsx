@@ -29,6 +29,7 @@ export default function RoomPage() {
   const [isReconnecting, setIsReconnecting] = useState(false);
   const [stateVersion, setStateVersion] = useState<number | null>(null);
   const versionRef = useRef<number | null>(null);
+  const cookTriggeredRef = useRef(false);
 
   useEffect(() => {
     versionRef.current = stateVersion;
@@ -73,7 +74,7 @@ export default function RoomPage() {
             setIsReconnecting(true);
             router.push('/');
           } else {
-            setIsReconnecting(false);
+            setIsReconnecting(true);
           }
           return next;
         });
@@ -81,7 +82,7 @@ export default function RoomPage() {
       }
 
       if (!res.ok) {
-        setIsReconnecting(false);
+        setIsReconnecting(true);
         return;
       }
 
@@ -94,7 +95,7 @@ export default function RoomPage() {
       setIsReconnecting(false);
     } catch (e) {
       console.error(e);
-      setIsReconnecting(false);
+      setIsReconnecting(true);
     }
   }, [player, roomId, router]);
 
@@ -130,6 +131,8 @@ export default function RoomPage() {
 
   useEffect(() => {
     if (timeLeft === 0 && room?.phase === 'COUNTDOWN' && room.players[0].id === player?.id) {
+       if (cookTriggeredRef.current) return;
+       cookTriggeredRef.current = true;
        fetch('/api/rooms/cook', {
          method: 'POST',
          headers: {
@@ -139,7 +142,13 @@ export default function RoomPage() {
          cache: 'no-store',
        });
     }
-  }, [timeLeft, room?.phase, room?.players, player?.id, roomId]);
+  }, [timeLeft, room?.phase, room?.players, player?.id, roomId, isDev]);
+
+  useEffect(() => {
+    if (room?.phase === 'COUNTDOWN') {
+      cookTriggeredRef.current = false;
+    }
+  }, [room?.phase]);
 
 
   const handleJoin = async (e: React.FormEvent) => {

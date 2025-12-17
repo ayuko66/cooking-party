@@ -122,7 +122,11 @@ async function updateRoom(
   const room = await getRoom(roomId);
   if (!room) return null;
   const next = updater({ ...room, players: [...room.players], ingredients: [...room.ingredients] });
-  if (!next) return room;
+  if (!next) {
+    // No state change, but refresh TTL
+    await adapter.set(roomKey(roomId), room, { ex: ROOM_TTL_SECONDS });
+    return room;
+  }
   next.version = (room.version ?? 0) + 1;
   next.updatedAt = Date.now();
   return saveRoom(next);

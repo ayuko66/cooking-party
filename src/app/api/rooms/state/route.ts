@@ -18,14 +18,14 @@ export async function GET(request: Request) {
 
   if (result.status === 'missing') {
     console.log('[room-state]', { action: 'state', roomId, version: null, phase: null, vercelRequestId: request.headers.get('x-vercel-id') });
-    return NextResponse.json({ error: 'Room not found' }, { status: 404 });
+    return NextResponse.json({ error: 'Room not found' }, { status: 404, headers: { 'Cache-Control': 'no-store' } });
   }
 
   if (result.status === 'unchanged') {
     console.log('[room-state]', { action: 'state', roomId, version: sinceVersion, phase: null, vercelRequestId: request.headers.get('x-vercel-id') });
-    return new Response(null, { status: 204 });
+    return new Response(null, { status: 204, headers: { 'Cache-Control': 'no-store' } });
   }
 
   console.log('[room-state]', { action: 'state', roomId, version: result.room.version, phase: result.room.phase, vercelRequestId: request.headers.get('x-vercel-id') });
-  return NextResponse.json(result.room, { status: 200 });
+  return NextResponse.json(result.room, { status: 200, headers: { 'Cache-Control': 'no-store' } });
 }
