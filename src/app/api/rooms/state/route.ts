@@ -10,6 +10,7 @@ export async function GET(request: Request) {
   const sinceVersionParam = searchParams.get('sinceVersion');
   const sinceVersion = sinceVersionParam ? parseInt(sinceVersionParam, 10) : undefined;
   const roomId = String(roomIdParam ?? '').trim().toUpperCase();
+  const debug = getStoreDebug();
 
   if (!roomId) {
     return NextResponse.json({ error: 'Missing roomId' }, { status: 400 });
@@ -19,20 +20,23 @@ export async function GET(request: Request) {
     const result = await getRoomWithVersion(roomId, sinceVersion);
 
     if (result.status === 'missing') {
-      console.log('[room-state]', { action: 'state', roomId, version: null, phase: null, ...getStoreDebug(), vercelRequestId: request.headers.get('x-vercel-id') });
+      console.log('[room-state]', { action: 'state', roomId, version: null, phase: null, ...debug, vercelRequestId: request.headers.get('x-vercel-id') });
+      if (debug.storeMode !== 'kv') {
+        return NextResponse.json({ error: 'Storage not configured' }, { status: 503, headers: { 'Cache-Control': 'no-store' } });
+      }
       return NextResponse.json({ error: 'Room not found' }, { status: 404, headers: { 'Cache-Control': 'no-store' } });
     }
 
     if (result.status === 'unchanged') {
-      console.log('[room-state]', { action: 'state', roomId, version: sinceVersion, phase: null, ...getStoreDebug(), vercelRequestId: request.headers.get('x-vercel-id') });
+      console.log('[room-state]', { action: 'state', roomId, version: sinceVersion, phase: null, ...debug, vercelRequestId: request.headers.get('x-vercel-id') });
       return new Response(null, { status: 204, headers: { 'Cache-Control': 'no-store' } });
     }
 
-    console.log('[room-state]', { action: 'state', roomId, version: result.room.version, phase: result.room.phase, ...getStoreDebug(), vercelRequestId: request.headers.get('x-vercel-id') });
+    console.log('[room-state]', { action: 'state', roomId, version: result.room.version, phase: result.room.phase, ...debug, vercelRequestId: request.headers.get('x-vercel-id') });
     return NextResponse.json(result.room, { status: 200, headers: { 'Cache-Control': 'no-store' } });
   } catch (error) {
     if (error instanceof KvUnavailableError) {
-      console.error('[room-state]', { status: 'kv_unavailable', roomId, ...getStoreDebug(), vercelRequestId: request.headers.get('x-vercel-id') });
+      console.error('[room-state]', { status: 'kv_unavailable', roomId, ...debug, vercelRequestId: request.headers.get('x-vercel-id') });
       return NextResponse.json({ error: 'KV unavailable' }, { status: 503, headers: { 'Cache-Control': 'no-store' } });
     }
     throw error;

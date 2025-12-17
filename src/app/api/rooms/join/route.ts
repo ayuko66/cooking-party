@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { KvUnavailableError, getRoom, joinRoom, getStoreMode, getStoreDebug } from '@/lib/store';
+import { KvUnavailableError, getRoom, joinRoom, getStoreDebug } from '@/lib/store';
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -21,6 +21,7 @@ export async function POST(request: Request) {
   try {
     const { roomId, nickname } = await request.json();
     const normalizedRoomId = String(roomId ?? '').trim().toUpperCase();
+    const debug = getStoreDebug();
     roomIdForLog = normalizedRoomId || null;
 
     if (!normalizedRoomId || !nickname) {
@@ -29,7 +30,11 @@ export async function POST(request: Request) {
 
     const room = await getRoomRetry(normalizedRoomId);
     if (!room) {
-      console.log('[room-join]', { action: 'join', roomId: normalizedRoomId, version: null, phase: null, ...getStoreDebug(), vercelRequestId: request.headers.get('x-vercel-id') });
+      if (debug.storeMode !== 'kv') {
+        console.log('[room-join]', { action: 'join', roomId: normalizedRoomId, version: null, phase: null, ...debug, vercelRequestId: request.headers.get('x-vercel-id') });
+        return NextResponse.json({ error: 'Storage not configured' }, { status: 503, headers: { 'Cache-Control': 'no-store' } });
+      }
+      console.log('[room-join]', { action: 'join', roomId: normalizedRoomId, version: null, phase: null, ...debug, vercelRequestId: request.headers.get('x-vercel-id') });
       return NextResponse.json({ error: '部屋が見つかりません' }, { status: 404, headers: { 'Cache-Control': 'no-store' } });
     }
 
@@ -44,7 +49,7 @@ export async function POST(request: Request) {
           roomId: normalizedRoomId,
           version: room.version,
           phase: room.phase,
-          ...getStoreDebug(),
+          ...debug,
           vercelRequestId: request.headers.get('x-vercel-id'),
         });
         return NextResponse.json({ error: 'Service unavailable' }, { status: 503, headers: { 'Cache-Control': 'no-store' } });
@@ -55,12 +60,12 @@ export async function POST(request: Request) {
         roomId: normalizedRoomId,
         version: latest.version,
         phase: latest.phase,
-        ...getStoreDebug(),
+        ...debug,
         vercelRequestId: request.headers.get('x-vercel-id'),
       });
       return NextResponse.json({ error: '次のゲームまで待っててね' }, { status: 400 });
     }
-    console.log('[room-join]', { action: 'join-ok', roomId: normalizedRoomId, version: room.version, phase: room.phase, ...getStoreDebug(), vercelRequestId: request.headers.get('x-vercel-id') });
+    console.log('[room-join]', { action: 'join-ok', roomId: normalizedRoomId, version: room.version, phase: room.phase, ...debug, vercelRequestId: request.headers.get('x-vercel-id') });
     return NextResponse.json({ player });
   } catch (error) {
     if (error instanceof KvUnavailableError) {

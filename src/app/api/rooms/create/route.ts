@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { KvUnavailableError, createRoom, getStoreMode, getStoreDebug } from '@/lib/store';
+import { KvUnavailableError, createRoom, getStoreDebug } from '@/lib/store';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';

@@ -6,6 +6,26 @@ export class KvUnavailableError extends Error {
   }
 }
 
+export const isVercelRuntime = Boolean(process.env.VERCEL);
+
+const DEFAULT_ROOM_TTL_SECONDS = 21600;
+const parsedTtl = parseInt(process.env.ROOM_TTL_SECONDS ?? `${DEFAULT_ROOM_TTL_SECONDS}`, 10);
+const ROOM_TTL_SECONDS =
+  Number.isFinite(parsedTtl) && parsedTtl > 60 ? parsedTtl : DEFAULT_ROOM_TTL_SECONDS; // guard against accidental tiny TTL
+const isKvEnvConfigured = Boolean(process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN);
+const allowMemoryFallback = process.env.NODE_ENV === 'development';
+const INSTANCE_ID = Math.random().toString(36).slice(2, 10);
+
+export const getStoreMode = (): 'kv' | 'memory' =>
+  isKvEnvConfigured ? 'kv' : allowMemoryFallback ? 'memory' : 'kv';
+export const getStoreDebug = () => ({
+  isKvEnvConfigured,
+  kvUrlPresent: Boolean(process.env.KV_REST_API_URL),
+  kvTokenPresent: Boolean(process.env.KV_REST_API_TOKEN),
+  storeMode: getStoreMode(),
+  instanceId: INSTANCE_ID,
+});
+
 // KV client is loaded lazily to avoid hard dependency during local/dev when env vars are missing
 let kvClient: any = null;
 const getKvClient = async () => {
@@ -50,20 +70,6 @@ export interface Room {
   updatedAt: number;
   version: number;
 }
-
-const DEFAULT_ROOM_TTL_SECONDS = 21600;
-const parsedTtl = parseInt(process.env.ROOM_TTL_SECONDS ?? `${DEFAULT_ROOM_TTL_SECONDS}`, 10);
-const ROOM_TTL_SECONDS =
-  Number.isFinite(parsedTtl) && parsedTtl > 60 ? parsedTtl : DEFAULT_ROOM_TTL_SECONDS; // guard against accidental tiny TTL
-const isKvEnvConfigured = Boolean(process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN);
-
-export const getStoreMode = (): 'kv' | 'memory' => (isKvEnvConfigured ? 'kv' : 'memory');
-export const getStoreDebug = () => ({
-  isKvEnvConfigured,
-  kvUrlPresent: Boolean(process.env.KV_REST_API_URL),
-  kvTokenPresent: Boolean(process.env.KV_REST_API_TOKEN),
-  storeMode: getStoreMode(),
-});
 
 type StoreAdapter = {
   get: <T>(key: string) => Promise<T | null>;
@@ -113,7 +119,16 @@ const adapter: StoreAdapter = isKvEnvConfigured
         }
       },
     }
-  : memoryStore;
+  : allowMemoryFallback
+    ? memoryStore
+    : {
+        get: async () => {
+          throw new KvUnavailableError('KV env not configured');
+        },
+        set: async () => {
+          throw new KvUnavailableError('KV env not configured');
+        },
+      };
 
 const roomKey = (roomId: string) => `room:${roomId}`;
 
