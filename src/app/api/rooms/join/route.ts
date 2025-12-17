@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { store } from '@/lib/store';
+import { getRoom, joinRoom } from '@/lib/store';
 
 export async function POST(request: Request) {
   const { roomId, nickname } = await request.json();
@@ -8,12 +8,12 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Missing roomId or nickname' }, { status: 400 });
   }
 
-  const room = store.getRoom(roomId);
+  const room = await getRoom(roomId);
   if (!room) {
     return NextResponse.json({ error: '部屋が見つかりません' }, { status: 404 });
   }
 
-  const player = store.joinRoom(roomId, nickname);
+  const player = await joinRoom(roomId, nickname);
   if (!player) {
     return NextResponse.json({ error: '次のゲームまで待っててね' }, { status: 400 });
   }

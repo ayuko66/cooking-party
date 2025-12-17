@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { store } from '@/lib/store';
+import { getRoom, setCookingPhase, setResult } from '@/lib/store';
 import { generateDish, generateImage } from '@/lib/ai';
 
 export async function POST(request: Request) {
@@ -9,13 +9,13 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Missing roomId' }, { status: 400 });
   }
 
-  const room = store.getRoom(roomId);
+  const room = await getRoom(roomId);
   if (!room) {
     return NextResponse.json({ error: 'Room not found' }, { status: 404 });
   }
 
   // 即座にCOOKINGフェーズへ移行
-  store.setCookingPhase(roomId);
+  await setCookingPhase(roomId);
 
   // AI生成を非同期で実行（レスポンスを待たない）
   // 実際のサーバーレス環境ではプロセスがキルされる可能性があるが、MVP/Docker環境では問題ない
@@ -23,7 +23,7 @@ export async function POST(request: Request) {
     try {
       if (isDev) {
         // Devモード: 固定レスポンス
-        store.setResult(roomId, {
+        await setResult(roomId, {
           dishName: 'DEV MODE カレー',
           description: 'これは開発モード用の固定レスポンスです。APIは使用されていません。',
           imageUrl: 'https://placehold.co/600x400?text=DEV+MODE',
@@ -50,7 +50,7 @@ export async function POST(request: Request) {
         imageUrl = await generateImage(dish.name, dish.description, ingredients);
       }
 
-      store.setResult(roomId, {
+      await setResult(roomId, {
         dishName,
         description,
         imageUrl,
@@ -58,7 +58,7 @@ export async function POST(request: Request) {
     } catch (error) {
       console.error('Cooking failed:', error);
       // エラー状態またはフォールバック結果を設定
-      store.setResult(roomId, {
+      await setResult(roomId, {
         dishName: '失敗した料理',
         description: '調理中に爆発しました。',
         imageUrl: 'https://placehold.co/600x400?text=Cooking+Failed',

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { store } from '@/lib/store';
+import { addIngredient } from '@/lib/store';
 
 export async function POST(request: Request) {
   const { roomId, playerId, text } = await request.json();
@@ -8,7 +8,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
   }
 
-  const success = store.addIngredient(roomId, playerId, text);
+  const success = await addIngredient(roomId, playerId, text);
   if (!success) {
     return NextResponse.json({ error: 'Failed to add ingredient (invalid phase or limit reached)' }, { status: 400 });
   }

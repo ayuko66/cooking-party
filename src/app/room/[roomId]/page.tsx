@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { ChefHat, Send, Users, User, Clipboard as ClipboardIcon, ClipboardCheck as ClipboardCheckIcon, RefreshCw, Sparkles, Clock, Crown } from 'lucide-react';
 import QRCode from 'react-qr-code';
@@ -25,6 +25,14 @@ export default function RoomPage() {
   const [error, setError] = useState('');
   const [shareUrl, setShareUrl] = useState('');
   const [copied, setCopied] = useState(false);
+  const [notFoundCount, setNotFoundCount] = useState(0);
+  const [isReconnecting, setIsReconnecting] = useState(false);
+  const [stateVersion, setStateVersion] = useState<number | null>(null);
+  const versionRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    versionRef.current = stateVersion;
+  }, [stateVersion]);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -38,30 +46,71 @@ export default function RoomPage() {
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const fetchState = useCallback(async () => {
+    if (!player) return;
+
+    try {
+      const params = new URLSearchParams({ roomId });
+      const since = versionRef.current;
+      if (since !== null) params.set('sinceVersion', String(since));
+
+      const res = await fetch(`/api/rooms/state?${params.toString()}`, { cache: 'no-store' });
+
+      if (res.status === 204) {
+        setNotFoundCount(0);
+        setIsReconnecting(false);
+        return;
+      }
+
+      if (res.status === 404) {
+        setNotFoundCount((prev) => {
+          const next = prev + 1;
+          if (next >= 3) {
+            setError('部屋が見つかりません');
+            router.push('/');
+          } else {
+            setIsReconnecting(true);
+          }
+          return next;
+        });
+        return;
+      }
+
+      if (!res.ok) {
+        setIsReconnecting(true);
+        return;
+      }
+
+      const data = await res.json();
+      setRoom(data);
+      if (typeof data.version === 'number') {
+        setStateVersion(data.version);
+      }
+      setNotFoundCount(0);
+      setIsReconnecting(false);
+    } catch (e) {
+      console.error(e);
+      setIsReconnecting(true);
+    }
+  }, [player, roomId, router]);
+
   useEffect(() => {
     if (!player) return;
 
-    const fetchState = async () => {
-      try {
-        const res = await fetch(`/api/rooms/state?roomId=${roomId}`);
-        if (res.ok) {
-          const data = await res.json();
-          setRoom(data);
-        } else {
-          if (res.status === 404) {
-            alert('部屋が見つかりません');
-            router.push('/');
-          }
-        }
-      } catch (e) {
-        console.error(e);
-      }
-    };
+    const pollingInterval = (() => {
+      if (!room || room.phase === 'LOBBY') return 2500;
+      if (room.phase === 'COUNTDOWN') return 800;
+      if (room.phase === 'COOKING') return 1500;
+      if (room.phase === 'RESULT') return null;
+      return 2500;
+    })();
 
     fetchState();
-    const interval = setInterval(fetchState, 1000);
+    if (!pollingInterval) return;
+
+    const interval = setInterval(fetchState, pollingInterval);
     return () => clearInterval(interval);
-  }, [roomId, player, router]);
+  }, [player, room?.phase, fetchState]);
 
   useEffect(() => {
     if (room?.phase === 'COUNTDOWN' && room.countdownEndTime) {
@@ -70,7 +119,7 @@ export default function RoomPage() {
         setTimeLeft(remaining);
       };
       updateTimer();
-      const timer = setInterval(updateTimer, 100);
+      const timer = setInterval(updateTimer, 250);
       return () => clearInterval(timer);
     }
   }, [room?.phase, room?.countdownEndTime]);
@@ -79,7 +128,11 @@ export default function RoomPage() {
     if (timeLeft === 0 && room?.phase === 'COUNTDOWN' && room.players[0].id === player?.id) {
        fetch('/api/rooms/cook', {
          method: 'POST',
+         headers: {
+           'Content-Type': 'application/json',
+         },
          body: JSON.stringify({ roomId, isDev }),
+         cache: 'no-store',
        });
     }
   }, [timeLeft, room?.phase, room?.players, player?.id, roomId]);
@@ -92,7 +145,11 @@ export default function RoomPage() {
     try {
       const res = await fetch('/api/rooms/join', {
         method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify({ roomId, nickname }),
+        cache: 'no-store',
       });
       const data = await res.json();
       if (res.ok) {
@@ -108,7 +165,11 @@ export default function RoomPage() {
   const handleStart = async () => {
     await fetch('/api/rooms/start', {
       method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
       body: JSON.stringify({ roomId }),
+      cache: 'no-store',
     });
   };
 
@@ -118,7 +179,11 @@ export default function RoomPage() {
 
     const res = await fetch('/api/rooms/submit', {
       method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
       body: JSON.stringify({ roomId, playerId: player.id, text: ingredient }),
+      cache: 'no-store',
     });
 
     if (res.ok) {
@@ -143,6 +208,13 @@ export default function RoomPage() {
   if (!player) {
     return (
       <InkLayout className="items-center justify-center p-4">
+        {isReconnecting && (
+          <div className="w-full max-w-5xl mx-auto mb-3 text-center">
+            <span className="inline-block bg-amber-300 text-black font-black text-xs px-3 py-2 rounded-full shadow-md border border-black/10">
+              再接続中…
+            </span>
+          </div>
+        )}
         <div className="w-full max-w-5xl grid items-stretch gap-6 md:gap-8 md:grid-cols-[1.05fr,0.95fr]">
 
           {/* Hero / Guidance */}
@@ -258,6 +330,13 @@ export default function RoomPage() {
 
   if (!room) return (
     <InkLayout className="items-center justify-center">
+      {isReconnecting && (
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20">
+          <span className="inline-block bg-amber-300 text-black font-black text-xs px-3 py-2 rounded-full shadow-md border border-black/10">
+            再接続中…
+          </span>
+        </div>
+      )}
       <div className="text-4xl font-black text-white animate-bounce drop-shadow-lg" role="status">
         LOADING...
       </div>
@@ -268,6 +347,13 @@ export default function RoomPage() {
 
   return (
     <InkLayout>
+      {isReconnecting && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50">
+          <span className="inline-block bg-amber-300 text-black font-black text-xs px-3 py-2 rounded-full shadow-md border border-black/10">
+            再接続中…
+          </span>
+        </div>
+      )}
       {/* HEADER */}
       <header className="sticky top-4 z-50 w-full max-w-4xl mx-auto px-4">
         <div className="flex justify-between items-center bg-ink-base/90 backdrop-blur-md p-2 pl-4 pr-2 rounded-full border-2 border-white/20 shadow-xl">

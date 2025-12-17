@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { store } from '@/lib/store';
+import { startGame } from '@/lib/store';
 
 export async function POST(request: Request) {
   const { roomId } = await request.json();
@@ -8,6 +8,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Missing roomId' }, { status: 400 });
   }
 
-  store.startGame(roomId);
+  await startGame(roomId);
   return NextResponse.json({ success: true });
 }
