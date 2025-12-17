@@ -1,50 +1,46 @@
+// src/lib/store.ts
 
-export class KvUnavailableError extends Error {
+import { getRedis } from './redis';
+
+export class StoreUnavailableError extends Error {
   constructor(message?: string) {
-    super(message ?? 'KV unavailable');
-    this.name = 'KvUnavailableError';
+    super(message ?? 'Store unavailable');
+    this.name = 'StoreUnavailableError';
   }
 }
+export { StoreUnavailableError as KvUnavailableError };
 
 export const isVercelRuntime = Boolean(process.env.VERCEL);
+
+export type StoreMode = 'redis' | 'memory' | 'none';
 
 const DEFAULT_ROOM_TTL_SECONDS = 21600;
 const parsedTtl = parseInt(process.env.ROOM_TTL_SECONDS ?? `${DEFAULT_ROOM_TTL_SECONDS}`, 10);
 const ROOM_TTL_SECONDS =
-  Number.isFinite(parsedTtl) && parsedTtl > 60 ? parsedTtl : DEFAULT_ROOM_TTL_SECONDS; // guard against accidental tiny TTL
-const isKvEnvConfigured = Boolean(process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN);
+  Number.isFinite(parsedTtl) && parsedTtl > 60 ? parsedTtl : DEFAULT_ROOM_TTL_SECONDS;
+
+const isRedisConfigured = Boolean(process.env.REDIS_URL);
 const allowMemoryFallback = !isVercelRuntime;
-const requiredStore: 'kv' | 'memory' = allowMemoryFallback ? 'memory' : 'kv';
-const activeStore: 'kv' | 'memory' | 'none' = isKvEnvConfigured ? 'kv' : allowMemoryFallback ? 'memory' : 'none';
+
+const preferredStore: StoreMode =
+  isRedisConfigured ? 'redis' : allowMemoryFallback ? 'memory' : 'none';
+
+const activeStore: StoreMode = preferredStore;
+
 const INSTANCE_ID = Math.random().toString(36).slice(2, 10);
 
-export const getStoreMode = (): 'kv' | 'memory' | 'none' => activeStore;
+export const getStoreMode = (): StoreMode => activeStore;
+
 export const getStoreDebug = () => ({
-  isKvEnvConfigured,
-  kvUrlPresent: Boolean(process.env.KV_REST_API_URL),
-  kvTokenPresent: Boolean(process.env.KV_REST_API_TOKEN),
-  storeMode: getStoreMode(),
+  isVercelRuntime,
+  redisUrlPresent: Boolean(process.env.REDIS_URL),
   allowMemoryFallback,
-  requiredStore,
+  preferredStore,
   activeStore,
   instanceId: INSTANCE_ID,
 });
 
 export const normalizeRoomId = (roomId: string) => String(roomId ?? '').trim().toUpperCase();
-
-// KV client is loaded lazily to avoid hard dependency during local/dev when env vars are missing
-let kvClient: any = null;
-const getKvClient = async () => {
-  if (kvClient) return kvClient;
-  try {
-    const mod = await import('@vercel/kv');
-    kvClient = mod.kv;
-    return kvClient;
-  } catch (err) {
-    console.warn('KV client unavailable.', err);
-    throw new KvUnavailableError('Failed to load KV client');
-  }
-};
 
 export type GamePhase = 'LOBBY' | 'COUNTDOWN' | 'COOKING' | 'RESULT';
 
@@ -70,7 +66,7 @@ export interface Room {
   phase: GamePhase;
   players: Player[];
   ingredients: Ingredient[];
-  countdownEndTime?: number; // タイムスタンプ
+  countdownEndTime?: number;
   result?: CookingResult;
   createdAt: number;
   updatedAt: number;
@@ -102,27 +98,25 @@ const memoryStore = (() => {
 })();
 
 const adapter: StoreAdapter =
-  activeStore === 'kv'
+  activeStore === 'redis'
     ? {
         get: async <T>(key: string) => {
           try {
-            const kv = await getKvClient();
-            const value = await kv.get(key);
-            return (value as T) ?? null;
-          } catch (err) {
-            if (err instanceof KvUnavailableError) throw err;
-            console.error('KV get error', err);
-            throw new KvUnavailableError('KV get failed');
+            const redis = await getRedis();
+            const value = await redis.get(key);
+            return value ? (JSON.parse(value) as T) : null;
+          } catch {
+            throw new StoreUnavailableError('Redis unavailable');
           }
         },
         set: async (key: string, value: any, opts?: { ex?: number }) => {
           try {
-            const kv = await getKvClient();
-            await kv.set(key, value, { ex: opts?.ex });
-          } catch (err) {
-            if (err instanceof KvUnavailableError) throw err;
-            console.error('KV set error', err);
-            throw new KvUnavailableError('KV set failed');
+            const redis = await getRedis();
+            const payload = JSON.stringify(value);
+            if (opts?.ex) await redis.set(key, payload, { EX: opts.ex });
+            else await redis.set(key, payload);
+          } catch {
+            throw new StoreUnavailableError('Redis unavailable');
           }
         },
       }
@@ -130,10 +124,10 @@ const adapter: StoreAdapter =
       ? memoryStore
       : {
           get: async () => {
-            throw new KvUnavailableError('KV env not configured');
+            throw new StoreUnavailableError('REDIS_URL is not configured');
           },
           set: async () => {
-            throw new KvUnavailableError('KV env not configured');
+            throw new StoreUnavailableError('REDIS_URL is not configured');
           },
         };
 
@@ -165,15 +159,11 @@ export async function getRoom(roomId: string): Promise<Room | null> {
   return room ?? null;
 }
 
-async function updateRoom(
-  roomId: string,
-  updater: (room: Room) => Room | null
-): Promise<Room | null> {
+async function updateRoom(roomId: string, updater: (room: Room) => Room | null): Promise<Room | null> {
   const room = await getRoom(roomId);
   if (!room) return null;
   const next = updater({ ...room, players: [...room.players], ingredients: [...room.ingredients] });
   if (!next) {
-    // No state change, but refresh TTL
     await adapter.set(roomKey(roomId), room, { ex: ROOM_TTL_SECONDS });
     return room;
   }
@@ -187,10 +177,7 @@ export async function joinRoom(roomId: string, nickname: string): Promise<Player
   await updateRoom(roomId, (room) => {
     if (room.phase !== 'LOBBY') return null;
     if (room.players.length >= 5) return null;
-    const player: Player = {
-      id: Math.random().toString(36).substring(2, 10),
-      nickname,
-    };
+    const player: Player = { id: Math.random().toString(36).substring(2, 10), nickname };
     joined = player;
     return { ...room, players: [...room.players, player] };
   });

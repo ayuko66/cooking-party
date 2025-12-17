@@ -1,7 +1,7 @@
 
 import { NextResponse } from 'next/server';
 import { generateDish, generateImage } from '@/lib/ai';
-import { CookingResult, KvUnavailableError, getRoom, setCookingPhase, setResult, getStoreDebug, normalizeRoomId } from '@/lib/store';
+import { CookingResult, StoreUnavailableError, getRoom, setCookingPhase, setResult, getStoreDebug, normalizeRoomId } from '@/lib/store';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -76,9 +76,9 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ success: true, result });
   } catch (error) {
-    if (error instanceof KvUnavailableError) {
-      console.error('[room-cook]', { status: 'kv_unavailable', roomId: roomIdForLog, ...getStoreDebug(), vercelRequestId: request.headers.get('x-vercel-id') });
-      return NextResponse.json({ error: 'KV unavailable' }, { status: 503, headers: { 'Cache-Control': 'no-store' } });
+    if (error instanceof StoreUnavailableError) {
+      console.error('[room-cook]', { status: 'store_unavailable', roomId: roomIdForLog, ...getStoreDebug(), vercelRequestId: request.headers.get('x-vercel-id') });
+      return NextResponse.json({ error: 'Store unavailable' }, { status: 503, headers: { 'Cache-Control': 'no-store' } });
     }
     throw error;
   }

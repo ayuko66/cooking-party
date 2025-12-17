@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { KvUnavailableError, getRoom, joinRoom, getStoreDebug, normalizeRoomId } from '@/lib/store';
+import { StoreUnavailableError, getRoom, joinRoom, getStoreDebug, normalizeRoomId } from '@/lib/store';
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -68,9 +68,9 @@ export async function POST(request: Request) {
     console.log('[room-join]', { action: 'join-ok', roomId: normalizedRoomId, version: room.version, phase: room.phase, ...debug, vercelRequestId: request.headers.get('x-vercel-id') });
     return NextResponse.json({ player });
   } catch (error) {
-    if (error instanceof KvUnavailableError) {
-      console.error('[room-join]', { status: 'kv_unavailable', roomId: roomIdForLog, ...getStoreDebug(), vercelRequestId: request.headers.get('x-vercel-id') });
-      return NextResponse.json({ error: 'KV unavailable' }, { status: 503, headers: { 'Cache-Control': 'no-store' } });
+    if (error instanceof StoreUnavailableError) {
+      console.error('[room-join]', { status: 'store_unavailable', roomId: roomIdForLog, ...getStoreDebug(), vercelRequestId: request.headers.get('x-vercel-id') });
+      return NextResponse.json({ error: 'Store unavailable' }, { status: 503, headers: { 'Cache-Control': 'no-store' } });
     }
     throw error;
   }
