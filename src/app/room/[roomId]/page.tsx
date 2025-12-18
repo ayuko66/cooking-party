@@ -35,6 +35,7 @@ export default function RoomPage() {
   const notFoundCountRef = useRef(0);
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const cookTriggeredRef = useRef(false);
+  const countdownEndRef = useRef<number | null>(null);
 
   useEffect(() => {
     versionRef.current = stateVersion;
@@ -42,6 +43,9 @@ export default function RoomPage() {
 
   useEffect(() => {
     roomRef.current = room;
+    if (room?.countdownEndTime) {
+      countdownEndRef.current = room.countdownEndTime;
+    }
   }, [room]);
 
   useEffect(() => {
@@ -167,17 +171,24 @@ export default function RoomPage() {
     };
   }, [player, fetchState]);
 
+  const computeTimeLeft = useCallback((endTime: number | string | null | undefined) => {
+    if (endTime === null || endTime === undefined) return null;
+    const ts = typeof endTime === 'string' ? Number(endTime) : endTime;
+    if (!Number.isFinite(ts)) return null;
+    return Math.max(0, Math.ceil((ts - Date.now()) / 1000));
+  }, []);
+
   useEffect(() => {
-    if (room?.phase === 'COUNTDOWN' && room.countdownEndTime) {
-      const updateTimer = () => {
-        const remaining = Math.max(0, Math.ceil((room.countdownEndTime! - Date.now()) / 1000));
-        setTimeLeft(remaining);
-      };
+    const endTime = room?.countdownEndTime ?? countdownEndRef.current;
+    if (room?.phase === 'COUNTDOWN' && endTime) {
+      const updateTimer = () => setTimeLeft(computeTimeLeft(endTime));
       updateTimer();
       const timer = setInterval(updateTimer, 250);
       return () => clearInterval(timer);
     }
-  }, [room?.phase, room?.countdownEndTime]);
+    // COUNTDOWN以外ではリセット
+    setTimeLeft(null);
+  }, [room?.phase, room?.countdownEndTime, computeTimeLeft]);
 
   useEffect(() => {
     if (timeLeft === 0 && room?.phase === 'COUNTDOWN' && room.players[0].id === player?.id) {
@@ -236,6 +247,8 @@ export default function RoomPage() {
   };
 
   const handleStart = async () => {
+    const provisionalEndTime = Date.now() + 30 * 1000;
+    countdownEndRef.current = provisionalEndTime;
     try {
       const res = await fetch('/api/rooms/start', {
         method: 'POST',
@@ -248,6 +261,8 @@ export default function RoomPage() {
       if (!res.ok) {
         setIsReconnecting(true);
       }
+      // サーバー反映前でも見えるように暫定でセット
+      setTimeLeft(computeTimeLeft(countdownEndRef.current));
     } catch (err) {
       console.error(err);
       setIsReconnecting(true);
@@ -464,7 +479,7 @@ export default function RoomPage() {
         </div>
       )}
       {/* HEADER */}
-      <header className="sticky top-4 z-50 w-full max-w-4xl mx-auto px-4">
+      <header className="sticky top-4 z-50 w-full max-w-4xl mx-auto px-4 mb-6">
         <div className="flex justify-between items-center bg-ink-base/90 backdrop-blur-md p-2 pl-4 pr-2 rounded-full border-2 border-white/20 shadow-xl">
           <div className="flex items-center gap-[3px]">
             <div className="bg-gradient-to-br from-ink-magenta to-ink-purple p-2.5 rounded-full shadow-inner border-2 border-white/10">
@@ -578,64 +593,69 @@ export default function RoomPage() {
       {/* GAME PHASE */}
       {room.phase === 'COUNTDOWN' && (
         <main className={containerClass}>
-          {/* Timer */}
-          <div className="relative mb-8 transform transition-transform duration-300 hover:scale-105 group">
-             <div className="absolute inset-0 bg-ink-magenta/20 blur-xl rounded-full group-hover:bg-ink-magenta/30 transition-colors" />
-             <svg className="w-56 h-56 -rotate-90 filter drop-shadow-[0_0_15px_rgba(240,0,255,0.4)]" viewBox="0 0 100 100" aria-hidden="true">
-              <circle cx="50" cy="50" r="45" fill="#0B1021" stroke="#1E293B" strokeWidth="8" />
-              <circle
-                cx="50" cy="50" r="45" fill="none" stroke="url(#timer-gradient)" strokeWidth="12"
-                strokeDasharray="283"
-                strokeDashoffset={283 - (283 * (timeLeft || 0)) / 30}
-                strokeLinecap="round"
-                className="transition-all duration-1000 ease-linear"
-              />
-              <defs>
-                <linearGradient id="timer-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                  <stop offset="0%" stopColor="#F000FF" />
-                  <stop offset="100%" stopColor="#CCFF00" />
-                </linearGradient>
-              </defs>
-            </svg>
-            <div className="absolute inset-0 flex items-center justify-center flex-col">
-              <span className="text-7xl font-black text-white font-mono drop-shadow-md tabular-nums transform -rotate-3 text-shadow-lg">{timeLeft}</span>
-              <span className="text-sm font-black text-ink-magenta uppercase tracking-widest mt-2 bg-black px-2 py-0.5 transform rotate-2">SECONDS</span>
-            </div>
-          </div>
+          <div className="w-full max-w-4xl mx-auto flex flex-col gap-6 px-5">
+            {/* Timer (fixed position between header and input) */}
+            {(() => {
+              const activeEndTime = room?.countdownEndTime ?? countdownEndRef.current;
+              const displayTimeLeft =
+                timeLeft ??
+                (room?.phase === 'COUNTDOWN' && activeEndTime
+                  ? computeTimeLeft(activeEndTime)
+                  : null);
+              return (
+                <div className="w-full overflow-hidden">
+                  <div className="w-full flex items-center justify-between gap-4 px-7 md:px-9 py-4 rounded-2xl bg-black/85 border-[5px] border-ink-magenta shadow-[0_0_30px_rgba(240,0,255,0.5),0_0_24px_rgba(204,255,0,0.45)]">
+                    <div className="flex flex-col leading-none">
+                      <span className="text-xs md:text-sm font-black uppercase tracking-[0.32em] text-ink-magenta">COUNTDOWN</span>
+                      <span className="text-white/90 text-sm font-bold">あと</span>
+                    </div>
+                    <div className="flex items-center gap-[3px]">
+                      <span className="inline-flex items-center justify-center px-5 py-2 rounded-2xl bg-ink-lime text-ink-base text-6xl md:text-7xl font-black font-mono tabular-nums shadow-[0_0_18px_rgba(204,255,0,0.8)]">
+                        {displayTimeLeft ?? '--'}
+                      </span>
+                      <span className="text-base md:text-lg font-black text-white uppercase tracking-[0.2em] bg-ink-magenta px-3 py-2 rounded-xl shadow-[0_6px_0_rgba(0,0,0,0.5)]">
+                        SECONDS
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
 
-          <form onSubmit={handleSubmitIngredient} className="w-full space-y-2 relative">
-             <div className="absolute -top-4 -left-2 w-16 h-6 tape -rotate-6 z-10" />
-            
-            <div className="bg-ink-surface p-4 pt-6 pb-6 rounded-3xl border-2 border-white/5 relative">
-              <label htmlFor="ingredient-input" className={labelClass}>
-                材料を入力
-              </label>
-              <div className="flex gap-4">
-                <input
-                  id="ingredient-input"
-                  type="text"
-                  value={ingredient}
-                  onChange={(e) => setIngredient(e.target.value)}
-                  placeholder="例: ドラゴンフルーツ"
-                  className={inputClass}
-                  maxLength={20}
-                  autoFocus
-                  autoComplete="off"
-                />
-                <button
-                  type="submit"
-                  disabled={!ingredient.trim()}
-                  className="aspect-square h-14 bg-ink-magenta hover:bg-ink-pink disabled:opacity-50 disabled:bg-gray-700 disabled:text-gray-500 rounded-xl flex items-center justify-center text-white transition-all shadow-[4px_4px_0_rgba(0,0,0,0.5)] active:shadow-none active:translate-y-1 focus:ring-4 focus:ring-ink-magenta/30 outline-none border-4 border-black box-border"
-                  aria-label="送信"
-                >
-                  <Send className="w-6 h-6 transform -rotate-12" />
-                </button>
+            <form onSubmit={handleSubmitIngredient} className="w-full space-y-2 relative mt-6">
+              <div className="absolute -top-4 -left-2 w-16 h-6 tape -rotate-6 z-10" />
+              
+              <div className="bg-ink-surface p-4 pt-6 pb-6 rounded-3xl relative">
+                <label htmlFor="ingredient-input" className={labelClass}>
+                  材料を入力
+                </label>
+                <div className="flex gap-4">
+                  <input
+                    id="ingredient-input"
+                    type="text"
+                    value={ingredient}
+                    onChange={(e) => setIngredient(e.target.value)}
+                    placeholder="例: ドラゴンフルーツ"
+                    className={inputClass}
+                    maxLength={20}
+                    autoFocus
+                    autoComplete="off"
+                  />
+                  <button
+                    type="submit"
+                    disabled={!ingredient.trim()}
+                    className="aspect-square h-14 bg-ink-magenta hover:bg-ink-pink disabled:opacity-50 disabled:bg-gray-700 disabled:text-gray-500 rounded-xl flex items-center justify-center text-white transition-all shadow-[4px_4px_0_rgba(0,0,0,0.5)] active:shadow-none active:translate-y-1 focus:ring-4 focus:ring-ink-magenta/30 outline-none border-4 border-black box-border"
+                    aria-label="送信"
+                  >
+                    <Send className="w-6 h-6 transform -rotate-12" />
+                  </button>
+                </div>
               </div>
-            </div>
-            <p className="text-center text-ink-cyan font-black text-lg mt-4 animate-pulse transform rotate-1">
-              どんどん送信しよう！
-            </p>
-          </form>
+              <p className="text-center text-ink-cyan font-black text-lg mt-4 animate-pulse transform rotate-1">
+                どんどん送信しよう！
+              </p>
+            </form>
+          </div>
 
           <div className={`${cardBaseClass} w-full min-h-[200px] mt-4`}>
              <div className="flex justify-between items-center mb-6 pb-4 border-b-2 border-dashed border-white/10">

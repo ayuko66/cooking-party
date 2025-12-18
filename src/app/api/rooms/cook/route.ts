@@ -12,6 +12,12 @@ const fallbackResult: CookingResult = {
   imageUrl: 'https://placehold.co/600x400?text=Cooking+Party',
 };
 
+const emptyIngredientResult: CookingResult = {
+  dishName: 'たくさんのおいしい空気定食',
+  description: '何も入っていないのに、なぜか満腹になる不思議な定食です。。',
+  imageUrl: 'https://placehold.co/600x400?text=Delicious+Air',
+};
+
 export async function POST(request: Request) {
   let roomIdForLog: string | null = null;
   try {
@@ -48,7 +54,9 @@ export async function POST(request: Request) {
     let result: CookingResult = fallbackResult;
 
     try {
-      if (isDev) {
+      if (ingredientTexts.length === 0) {
+        result = emptyIngredientResult;
+      } else if (isDev) {
         result = {
           dishName: 'デバッグカレーDX',
           description: 'devモード用の固定レスポンスです。AIを呼ばずに完了しました。',

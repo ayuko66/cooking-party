@@ -37,7 +37,7 @@ export function DevModeProvider({ children }: { children: React.ReactNode }) {
     <DevModeContext.Provider value={isDev}>
       {isDev && (
         <div className="fixed right-4 bottom-4 z-[100] pointer-events-none md:right-6 md:bottom-6">
-          <div className="bg-neutral-900 text-white font-black text-xs uppercase tracking-wider px-[3px] py-[3px] rounded-md shadow-lg border-2 border-white/30">
+          <div className="bg-neutral-900 text-white font-black text-xs uppercase tracking-wider px-2 py-[3px] rounded-md shadow-lg border-2 border-white/30 flex items-center justify-center text-center min-w-[110px]">
             DEVモード中
           </div>
         </div>

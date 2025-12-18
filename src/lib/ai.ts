@@ -96,11 +96,18 @@ export async function generateImage(dishName: string, description: string, ingre
     ingredients.length > 0 ? ingredients.join(', ') : 'no specific ingredients';
 
   const prompt = `
-Generate an illustration of a single Japanese home-style fantasy dish called "${dishName}".
+Create a cute, pop, whimsical illustration of a single Japanese home-style fantasy dish named "${dishName}".
 Main ingredients: ${ingredientText}.
 Description: ${description}.
-Top-down view, one round plate in the center, only this dish on the table.
-Cute, pop illustration style, not realistic, soft colors, simple background, white or light wood table.
+
+Composition: top-down view, one round plate centered, only this dish on the table. Clean simple background.
+Style: illustrated, non-photorealistic, soft yet vivid colors, playful and joyful palette, slightly surreal/fantasy feeling.
+Table: white or very light wood.
+
+STRICT NEGATIVES:
+- Do NOT include any text, title, letters, numbers, logos, watermarks, labels, captions, signs, packaging, menus, or UI elements.
+- Do NOT add extra dishes, utensils, hands, people, animals, or background objects.
+- Avoid realism, avoid photo look, avoid heavy shading, avoid messy texture.
 `.trim();
 
   try {
