@@ -96,7 +96,7 @@ export async function generateImage(dishName: string, description: string, ingre
     ingredients.length > 0 ? ingredients.join(', ') : 'no specific ingredients';
 
   const prompt = `
-Create a cute, pop, whimsical illustration of a single Japanese home-style fantasy dish named "${dishName}".
+Create a cute, pop, whimsical illustration of a single Japanese home-style fantasy and funny dish. Theme keywords (do NOT write as text):  "${dishName}".
 Main ingredients: ${ingredientText}.
 Description: ${description}.
 
